@@ -1,30 +1,44 @@
-<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ page pageEncoding="UTF-8" %>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-100">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><c:out value="${titulo}"/> · Control de Tickets</title>
-    <link rel="stylesheet" href="<c:url value='/css/estilos.css'/>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Tickets - UMG</title>
+    <!-- Carga de las librerías físicas que descargaste -->
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap-icons.min.css">
 </head>
-<body>
-<header class="topbar">
-    <a class="marca" href="<c:url value='/inicio'/>">🎫 Control de Tickets</a>
-    <input type="checkbox" id="menu-toggle" class="menu-toggle">
-    <label for="menu-toggle" class="menu-btn" aria-label="Abrir o cerrar el menú">☰</label>
-    <nav class="menu">
-        <a href="<c:url value='/tablero'/>">Tablero FIFO</a>
-        <c:forEach var="m" items="${entidades}">
-            <a href="<c:url value='/crud/${m.clave}'/>"><c:out value="${m.titulo}"/></a>
-        </c:forEach>
-        <a href="<c:url value='/historial'/>">Historial</a>
-        <a href="<c:url value='/notificaciones'/>">Notificaciones</a>
-        <a href="<c:url value='/config'/>">⚙ Configuración</a>
+<body class="d-flex flex-column h-100 bg-light">
+
+    <!-- Barra de navegación adaptable de Bootstrap -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold text-primary" href="InicioServlet">
+                <i class="bi bi-ticket-perforated-fill me-2"></i>UMG Tickets
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="InicioServlet"><i class="bi bi-kanban me-1"></i> Tablero</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="HistorialServlet"><i class="bi bi-clock-history me-1"></i> Historial</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="NotificacionesServlet"><i class="bi bi-bell me-1"></i> Notificaciones</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="ConfigServlet"><i class="bi bi-gear me-1"></i> Configuración</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </nav>
-</header>
-<main class="contenedor">
-<c:if test="${not empty flashMensaje}">
-    <div class="alerta ${flashTipo eq 'ok' ? 'ok' : 'error'}" role="alert"><c:out value="${flashMensaje}"/></div>
-</c:if>
+
+    <!-- Contenedor general fluido -->
+    <main class="flex-shrink-0">
+        <div class="container-fluid px-4 pb-5">

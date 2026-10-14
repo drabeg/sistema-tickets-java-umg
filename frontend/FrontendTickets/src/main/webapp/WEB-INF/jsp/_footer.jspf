@@ -1,8 +1,17 @@
-</main>
-<footer class="pie">
-    Proyecto Final · Programación II · Control de Tickets (cola FIFO) — Servicios SOAP:
-    <code><c:out value="${baseUrl}"/></code>
-</footer>
-<script src="<c:url value='/js/app.js'/>"></script>
+<%@ page pageEncoding="UTF-8" %>
+        </div> <!-- Cierre del container-fluid de contenido -->
+    </main>
+
+    <!-- Pie de página responsivo -->
+    <footer class="footer mt-auto py-3 bg-white text-center border-top">
+        <div class="container-fluid px-4 text-muted">
+            <small>&copy; 2026 - Universidad Mariano Gálvez de Guatemala | Ingeniería en Sistemas</small>
+        </div>
+    </footer>
+
+    <!-- Carga de la librería JavaScript física que descargaste -->
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
+    <!-- Script local para el control asíncrono -->
+    <script src="${pageContext.request.contextPath}/js/app.js"></script>
 </body>
 </html>
