@@ -1,0 +1,24 @@
+# Salidas de compilación
+build/
+dist/
+target/
+*.class
+*.war
+*.log
+
+# NetBeans / IDEs (configuración local de cada integrante)
+nbproject/private/
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos con secretos (nunca subir contraseñas reales)
+*.env
+secrets.properties

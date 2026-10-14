@@ -1,0 +1,8 @@
+</main>
+<footer class="pie">
+    Proyecto Final · Programación II · Control de Tickets (cola FIFO) — Servicios SOAP:
+    <code><c:out value="${baseUrl}"/></code>
+</footer>
+<script src="<c:url value='/js/app.js'/>"></script>
+</body>
+</html>
