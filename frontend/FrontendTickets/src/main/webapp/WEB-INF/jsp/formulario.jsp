@@ -1,7 +1,7 @@
 <%@ include file="/WEB-INF/jsp/_header.jspf" %>
 <section class="encabezado-pagina">
     <h1><c:out value="${modo eq 'nuevo' ? 'Nuevo' : 'Editar'}"/> <c:out value="${fn:toLowerCase(entidad.singular)}"/></h1>
-    <a class="btn secundario" href="<c:url value='/crud/${entidad.clave}'/>">← Volver</a>
+    <a class="btn secundario" href="<c:url value='/crud/${entidad.clave}'/>"><svg class="icono"><use href="#i-arrow-left"/></svg> Volver</a>
 </section>
 
 <c:if test="${not empty errores}">

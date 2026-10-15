@@ -1,6 +1,6 @@
 <%@ include file="/WEB-INF/jsp/_header.jspf" %>
 <section class="encabezado-pagina">
-    <h1>📋 Tablero FIFO</h1>
+    <h1><svg class="icono"><use href="#i-clipboard"/></svg> Tablero FIFO</h1>
     <a class="btn primario" href="<c:url value='/crud/tickets/nuevo'/>">+ Nuevo ticket</a>
 </section>
 <p class="intro">Los tickets se atienden en estricto orden de llegada (el más antiguo arriba). Un ticket debe ser reclamado por un especialista y avanza un estado a la vez.</p>
@@ -51,7 +51,7 @@
                             <input type="hidden" name="accion" value="avanzar">
                             <input type="hidden" name="idTicket" value="<c:out value='${t.ID}'/>">
                             <input type="hidden" name="idNuevoEstado" value="<c:out value='${t._siguienteId}'/>">
-                            <button class="btn primario pequeno" type="submit">Pasar a <c:out value="${t['_siguienteNombre']}"/> →</button>
+                            <button class="btn primario pequeno" type="submit">Pasar a <c:out value="${t['_siguienteNombre']}"/><svg class="icono ms-1"><use href="#i-arrow-right"/></svg></button>
                         </form>
                     </c:if>
                     <c:if test="${t['_puedeEliminar'] eq 'true'}">

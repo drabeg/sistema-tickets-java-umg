@@ -10,11 +10,13 @@
     
     <!-- Controles de visualización técnicos sin emojis -->
     <div class="d-flex align-items-center gap-1">
-        <button class="btn btn-jira-action px-2.5 py-1 fw-bold" id="btnToggleTheme" onclick="alternarModoOscuro()" title="Cambiar Tema" style="font-size: 0.85rem;">
-            <span id="themeIcon">[Contrast]</span>
+        <button class="btn btn-jira-action d-inline-flex align-items-center px-2 py-1" id="btnToggleTheme" onclick="alternarModoOscuro()" title="Cambiar tema" aria-label="Cambiar tema">
+            <svg class="icono i-tema-luna"><use href="#i-moon"/></svg>
+            <svg class="icono i-tema-sol"><use href="#i-sun"/></svg>
         </button>
-        <button class="btn btn-jira-action px-2.5 py-1 fw-bold" onclick="togglePantallaCompleta()" title="Pantalla Completa" style="font-size: 0.85rem;">
-            [Max]
+        <button class="btn btn-jira-action d-inline-flex align-items-center px-2 py-1" onclick="togglePantallaCompleta()" title="Pantalla completa" aria-label="Pantalla completa">
+            <svg class="icono i-fs-entrar"><use href="#i-maximize"/></svg>
+            <svg class="icono i-fs-salir"><use href="#i-minimize"/></svg>
         </button>
     </div>
 </div>
@@ -22,17 +24,18 @@
 <!-- FILA INTERMEDIA: ALINEACIÓN PERFECTA DEL BUSCADOR, FILTROS Y BOTÓN -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom border-secondary-subtle">
     <div class="d-flex align-items-center gap-2 flex-wrap" style="flex: 1;">
-        <div style="max-width: 250px; width: 100%;">
-            <input type="text" id="buscadorTickets" class="form-control py-1.5 fs-7 rounded-2" 
-                   placeholder="Buscar ticket..." onkeyup="filtrarTicketsPorTexto()">
+        <div class="position-relative" style="max-width: 250px; width: 100%;">
+            <svg class="icono icono-input"><use href="#i-search"/></svg>
+            <input type="text" id="buscadorTickets" class="form-control py-1.5 fs-7 rounded-2 ps-5" 
+                   placeholder="Buscar ticket..." aria-label="Buscar ticket" onkeyup="filtrarTicketsPorTexto()">
         </div>
         <button class="btn btn-sm btn-jira-action py-1.5" onclick="filtrarPrioridad('alta')">Prioridad Alta</button>
         <button class="btn btn-sm btn-jira-action py-1.5" onclick="filtrarPrioridad('todas')">Mostrar Todo</button>
     </div>
     
     <div>
-        <button class="btn btn-primary bg-primary border-primary px-4 py-1.5 fw-semibold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoTicket">
-            Crear Ticket
+        <button class="btn btn-primary bg-primary border-primary px-4 py-1.5 fw-semibold text-white d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalNuevoTicket">
+            <svg class="icono"><use href="#i-plus"/></svg>Crear Ticket
         </button>
     </div>
 </div>
@@ -54,7 +57,7 @@
                 <div class="meta mb-3">No se emiten reportes de inventario.</div>
                 <div class="d-flex justify-content-end gap-2 border-top pt-2">
                     <button class="btn btn-sm btn-outline-primary py-1 px-2.5 rounded-2 fw-semibold text-primary" style="font-size:0.85rem;" onclick="cambiarEstadoTicket(101, 'proceso')">
-                        Atender &rarr;
+                        Atender <svg class="icono ms-1"><use href="#i-arrow-right"/></svg>
                     </button>
                 </div>
             </div>
@@ -74,8 +77,8 @@
             <span>Finalizado</span>
             <div class="d-flex align-items-center gap-2">
                 <span class="contador" id="badge-finalizado">0</span>
-                <button class="btn p-0 border-0 bg-transparent text-muted fw-bold" onclick="limpiarColumnaFinalizados()" title="Limpiar columna" style="font-size: 0.85rem; color: var(--texto-secundario) !important;">
-                    [X]
+                <button class="btn p-0 border-0 bg-transparent d-inline-flex align-items-center" onclick="limpiarColumnaFinalizados()" title="Limpiar columna" aria-label="Limpiar columna" style="color: var(--texto-secundario) !important;">
+                    <svg class="icono"><use href="#i-trash"/></svg>
                 </button>
             </div>
         </h2>

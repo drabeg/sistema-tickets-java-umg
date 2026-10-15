@@ -24,13 +24,13 @@ function cambiarEstadoTicket(ticketId, nuevoEstado) {
             contenedorBotones.innerHTML = `
                 <button class="btn btn-sm btn-outline-success d-flex align-items-center py-1 px-2.5 rounded-2 fw-semibold" style="font-size:0.85rem;"
                         onclick="cambiarEstadoTicket(${ticketId}, 'finalizado')">
-                    Finalizar <i class="bi bi-check2-circle ms-1"></i>
+                    Finalizar <svg class="icono ms-1"><use href="#i-check-circle"/></svg>
                 </button>
             `;
         } else if (nuevoEstado === 'finalizado') {
             contenedorBotones.innerHTML = `
                 <span class="text-success small fw-bold d-flex align-items-center" style="font-size:0.85rem;">
-                    <i class="bi bi-check-lg me-1"></i> Resuelto
+                    <svg class="icono me-1"><use href="#i-check"/></svg> Resuelto
                 </span>
             `;
         }
@@ -119,7 +119,7 @@ function limpiarColumnaFinalizados() {
             
             setTimeout(() => {
                 tarjeta.remove();
-                actualadoresContadoresTablero();
+                actualizarContadoresTablero();
             }, 300);
         });
     }
@@ -130,30 +130,21 @@ function limpiarColumnaFinalizados() {
  * la preferencia del usuario en el navegador de forma local.
  */
 function alternarModoOscuro() {
-    const cuerpo = document.documentElement;
-    const icono = document.getElementById("themeIcon");
-    
-    if (cuerpo.getAttribute("data-theme") === "dark") {
-        cuerpo.removeAttribute("data-theme");
-        if (icono) icono.textContent = "[Contrast]";
+    const raiz = document.documentElement;   // el tema vive SIEMPRE en <html data-theme>
+    if (raiz.getAttribute("data-theme") === "dark") {
+        raiz.removeAttribute("data-theme");
         localStorage.setItem("temaSeleccionado", "light");
     } else {
-        cuerpo.setAttribute("data-theme", "dark");
-        if (icono) icono.textContent = "[Contrast]";
+        raiz.setAttribute("data-theme", "dark");
         localStorage.setItem("temaSeleccionado", "dark");
     }
+    // El cambio de icono (luna/sol) lo hace estilos.css según data-theme.
 }
 
-// Escuchador global: Al cargar la página, verificamos y aplicamos el tema e icono correspondientes
+// Al cargar: aplica el tema guardado (el header ya lo aplicó antes de pintar) y recalcula contadores
 document.addEventListener("DOMContentLoaded", () => {
-    const temaGuardado = localStorage.getItem("temaSeleccionado");
-    const icono = document.getElementById("themeIcon");
-    
-    if (temaGuardado === "dark") {
+    if (localStorage.getItem("temaSeleccionado") === "dark") {
         document.documentElement.setAttribute("data-theme", "dark");
-        if (icono) icono.textContent = "[Contrast]";
-    } else {
-        if (icono) icono.textContent = "[Contrast]";
     }
     if (typeof actualizarContadoresTablero === "function") {
         actualizarContadoresTablero();
@@ -213,17 +204,6 @@ function filtrarPrioridad(prioridad) {
         }
     });
 }
-
-// Al cargar la página, verificamos si el usuario ya tenía activo el Modo Oscuro
-document.addEventListener("DOMContentLoaded", () => {
-    const temaGuardado = localStorage.getItem("temaSeleccionado");
-    if (temaGuardado === "dark") {
-        document.documentElement.setAttribute("data-theme", "dark");
-        const icono = document.getElementById("themeIcon");
-        if (icono) icono.className = "bi bi-sun-fill";
-    }
-    actualizarContadoresTablero();
-});
 
 // ========================================================
 /* LOGICA DE ARRASTRE Y SOLTADO (DRAG AND DROP NATIVO) */

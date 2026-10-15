@@ -22,3 +22,6 @@ Thumbs.db
 # Archivos con secretos (nunca subir contraseñas reales)
 *.env
 secrets.properties
+
+
+*.zip

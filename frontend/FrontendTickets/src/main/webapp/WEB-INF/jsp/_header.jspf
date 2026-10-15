@@ -8,10 +8,12 @@
     <!-- CONFIGURACIÓN DE RUTAS ABSOLUTAS PROFESIONALES (CON BARRA DIAGONAL INICIAL) -->
     <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/css/logo-umg.png">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap-icons.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
+    <!-- Aplica el tema guardado ANTES de pintar la página (evita el parpadeo claro/oscuro al navegar) -->
+    <script>try { if (localStorage.getItem("temaSeleccionado") === "dark") { document.documentElement.setAttribute("data-theme", "dark"); } } catch (e) { }</script>
 </head>
 <body class="d-flex flex-column h-100">
+    <%@ include file="_iconos.jspf" %>
 
     <!-- Barra de navegación corporativa UMG -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4 py-3">

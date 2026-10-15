@@ -139,3 +139,28 @@ input, select, textarea {
 .btn-jira-action:hover {
     background-color: var(--bg-global) !important;
 }
+
+/* ========================================================
+   ICONOS VECTORIALES (sprite SVG local en _iconos.jspf)
+   Heredan el color del texto: funcionan en modo claro y oscuro
+   ======================================================== */
+.icono {
+    width: 1.25em; height: 1.25em;
+    fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+    vertical-align: -0.22em; flex-shrink: 0;
+}
+.icono-lg { width: 1.7rem; height: 1.7rem; }
+.icono-xl { width: 2.6rem; height: 2.6rem; }
+.icono-input {            /* lupa dentro de un input */
+    position: absolute; left: .7rem; top: 50%; transform: translateY(-50%);
+    color: var(--texto-secundario); pointer-events: none;
+}
+/* Modo oscuro: se muestra el sol (para volver a claro); en modo claro, la luna */
+.i-tema-sol { display: none; }
+[data-theme="dark"] .i-tema-luna { display: none; }
+[data-theme="dark"] .i-tema-sol  { display: inline-block; }
+/* Pantalla completa: maximizar <-> minimizar */
+.i-fs-salir { display: none; }
+:fullscreen .i-fs-entrar { display: none; }
+:fullscreen .i-fs-salir  { display: inline-block; }
