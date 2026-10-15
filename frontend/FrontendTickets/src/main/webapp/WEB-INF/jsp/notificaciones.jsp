@@ -1,40 +1,33 @@
-<%@ include file="/WEB-INF/jsp/_header.jspf" %>
-<section class="encabezado-pagina">
-    <h1>🔔 Notificaciones</h1>
-</section>
-<form class="buscador" method="get" action="<c:url value='/notificaciones'/>">
-    <label for="idEspecialista">Especialista</label>
-    <select id="idEspecialista" name="idEspecialista" required>
-        <option value="">-- Seleccione --</option>
-        <c:forEach var="e" items="${especialistas}">
-            <option value="<c:out value='${e.id}'/>" ${idSeleccionado eq e.id ? 'selected' : ''}><c:out value="${e.texto}"/></option>
-        </c:forEach>
-    </select>
-    <button class="btn" type="submit">Ver pendientes</button>
-</form>
+<%@ page contentType="text/html" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 
-<c:if test="${not empty tabla.aviso}"><div class="alerta info"><c:out value="${tabla.aviso}"/></div></c:if>
-<c:if test="${not empty tabla.filas}">
-    <div class="tabla-responsive">
-        <table class="tabla">
-            <thead><tr><c:forEach var="col" items="${tabla.columnas}"><th><c:out value="${col}"/></th></c:forEach><th>Acciones</th></tr></thead>
-            <tbody>
-                <c:forEach var="fila" items="${tabla.filas}">
-                    <tr>
-                        <c:forEach var="celda" items="${fila.celdas}" varStatus="st">
-                            <td data-label="<c:out value='${tabla.columnas[st.index]}'/>"><c:out value="${celda}"/></td>
-                        </c:forEach>
-                        <td data-label="Acciones" class="acciones">
-                            <form method="post" action="<c:url value='/notificaciones'/>">
-                                <input type="hidden" name="idNotificacion" value="<c:out value='${fila.id}'/>">
-                                <input type="hidden" name="idEspecialista" value="<c:out value='${idSeleccionado}'/>">
-                                <button class="btn pequeno" type="submit">Marcar leída</button>
-                            </form>
-                        </td>
-                    </tr>
-                </c:forEach>
-            </tbody>
-        </table>
+<div class="mb-4">
+    <h1 class="h3 mb-1 fw-bold">Centro de Notificaciones</h1>
+    <p class="text-muted small">Alertas de sistema de la infraestructura distribuida bajo Radmin VPN.</p>
+</div>
+
+<div class="card border-0 shadow-sm p-4" style="background-color: var(--bg-tarjeta);">
+    <div class="alert alert-danger d-flex align-items-center gap-3 mb-3 border-0 shadow-sm py-3" role="alert">
+        <span class="fs-4">🚨</span>
+        <div>
+            <div class="fw-bold text-danger">Fallo de Comunicación - SQL Server</div>
+            <span class="small text-muted">La conexión TCP/IP hacia la IP de Libbny falló en el puerto 1433 de la red virtual. Reintentando...</span>
+        </div>
     </div>
-</c:if>
-<%@ include file="/WEB-INF/jsp/_footer.jspf" %>
+
+    <div class="alert alert-success d-flex align-items-center gap-3 mb-3 border-0 shadow-sm py-3" role="alert">
+        <span class="fs-4">✅</span>
+        <div>
+            <div class="fw-bold text-success">Middleware Sincronizado Exitosamente</div>
+            <span class="small text-muted">Servidor GlassFish 7.1.0 levantado en el puerto 9090. Web Services SOAP (WSTickets) listos para consumo asíncrono.</span>
+        </div>
+    </div>
+
+    <div class="alert alert-info d-flex align-items-center gap-3 mb-0 border-0 shadow-sm py-3" role="alert">
+        <span class="fs-4">ℹ️</span>
+        <div>
+            <div class="fw-bold text-info">Nuevos Tickets en Cola FIFO</div>
+            <span class="small text-muted">Se registraron 2 incidencias de prioridad alta desde el nodo cliente móvil.</span>
+        </div>
+    </div>
+</div>

@@ -1,113 +1,118 @@
 <%@ page contentType="text/html" pageEncoding="UTF-8" %>
 <%@ include file="_header.jspf" %>
 
-<!-- Encabezado de la página con botones adaptables -->
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+<!-- FILA SUPERIOR: TÍTULO Y CONTROLES LIMPIOS -->
+<div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
     <div>
-        <h1 class="h3 mb-1 text-dark fw-bold">Tablero de Gestión</h1>
-        <p class="text-muted small mb-0">Control de flujo de atención técnica mediante cola estructurada.</p>
+        <h1 class="h3 mb-1 fw-bold">Tablero de Gestión</h1>
+        <p class="text-muted small mb-0">Flujo automatizado para atención técnica estructurada.</p>
     </div>
-    <!-- Botón disparador del Modal Flotante de Bootstrap -->
-    <button class="btn btn-primary shadow-sm px-4 py-2 fw-semibold d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#modalNuevoTicket">
-        <i class="bi bi-plus-lg me-2"></i> Crear Nuevo Ticket
-    </button>
+    
+    <!-- Controles de visualización técnicos sin emojis -->
+    <div class="d-flex align-items-center gap-1">
+        <button class="btn btn-jira-action px-2.5 py-1 fw-bold" id="btnToggleTheme" onclick="alternarModoOscuro()" title="Cambiar Tema" style="font-size: 0.85rem;">
+            <span id="themeIcon">[Contrast]</span>
+        </button>
+        <button class="btn btn-jira-action px-2.5 py-1 fw-bold" onclick="togglePantallaCompleta()" title="Pantalla Completa" style="font-size: 0.85rem;">
+            [Max]
+        </button>
+    </div>
 </div>
 
-<!-- CONTENEDOR KANBAN DE TRES COLUMNAS RESPONSIVO -->
-<div class="row g-4">
+<!-- FILA INTERMEDIA: ALINEACIÓN PERFECTA DEL BUSCADOR, FILTROS Y BOTÓN -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom border-secondary-subtle">
+    <div class="d-flex align-items-center gap-2 flex-wrap" style="flex: 1;">
+        <div style="max-width: 250px; width: 100%;">
+            <input type="text" id="buscadorTickets" class="form-control py-1.5 fs-7 rounded-2" 
+                   placeholder="Buscar ticket..." onkeyup="filtrarTicketsPorTexto()">
+        </div>
+        <button class="btn btn-sm btn-jira-action py-1.5" onclick="filtrarPrioridad('alta')">Prioridad Alta</button>
+        <button class="btn btn-sm btn-jira-action py-1.5" onclick="filtrarPrioridad('todas')">Mostrar Todo</button>
+    </div>
     
-    <!-- Columna: Solicitado -->
-    <div class="col-12 col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
-            <div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center py-3 border-0">
-                <span class="d-flex align-items-center"><i class="bi bi-inbox me-2"></i> Solicitado</span>
-                <span class="badge bg-light text-dark shadow-sm px-2.5 py-1.5" id="badge-solicitado">1</span>
-            </div>
-            <div class="card-body p-2 bg-light-subtle transition-all" id="col-solicitado" style="min-height: 550px;">
-                <!-- Tarjeta de ejemplo autogenerada -->
-                <div class="card mb-3 shadow-sm border-start border-danger border-4 rounded-3" id="ticket-101">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Alta Prioridad</span>
-                            <span class="text-muted small fw-semibold">#101</span>
-                        </div>
-                        <h6 class="card-title fw-bold text-dark mb-1">Error en servidor de impresión</h6>
-                        <p class="card-text text-muted small mb-3">No se pueden emitir reportes de inventario desde el nodo de operaciones.</p>
-                        <div class="d-flex justify-content-end gap-2 border-top pt-2 mt-2">
-                            <button class="btn btn-sm btn-outline-primary d-flex align-items-center py-1.5 px-3 rounded-2 fw-semibold" onclick="cambiarEstadoTicket(101, 'proceso')">
-                                Atender <i class="bi bi-arrow-right ms-2"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div>
+        <button class="btn btn-primary bg-primary border-primary px-4 py-1.5 fw-semibold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoTicket">
+            Crear Ticket
+        </button>
     </div>
+</div>
 
-    <!-- Columna: En Proceso -->
-    <div class="col-12 col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
-            <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center py-3 border-0">
-                <span class="d-flex align-items-center"><i class="bi bi-gear-fill me-2"></i> En Proceso</span>
-                <span class="badge bg-dark text-white shadow-sm px-2.5 py-1.5" id="badge-proceso">0</span>
-            </div>
-            <div class="card-body p-2 bg-light-subtle" id="col-proceso" style="min-height: 550px;">
-                <!-- Los tickets en atención se inyectarán dinámicamente aquí -->
-            </div>
-        </div>
-    </div>
-
-     <!-- Columna: Finalizado (Actualizada con botón de limpieza) -->
-    <div class="col-12 col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
-            <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center py-3 border-0">
-                <span class="d-flex align-items-center"><i class="bi bi-check-circle-fill me-2"></i> Finalizado</span>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-light text-dark shadow-sm px-2.5 py-1.5" id="badge-finalizado">0</span>
-                    <!-- Botón para archivar/limpiar las tarjetas resueltas de la vista actual -->
-                    <button class="btn btn-sm btn-success border border-white-50 p-1 lh-1 rounded-2" 
-                            title="Limpiar tablero" onclick="limpiarColumnaFinalizados()">
-                        <i class="bi bi-trash3-fill fs-6"></i>
+<!-- TABLERO KANBAN ACTIVADO PARA ARRASTRE -->
+<div class="tablero">
+    <div class="columna" ondragover="permitirSoltar(event)" ondrop="soltarTicket(event, 'solicitado')">
+        <h2>
+            <span>Solicitado</span>
+            <span class="contador" id="badge-solicitado">1</span>
+        </h2>
+        <div id="col-solicitado" style="min-height: 500px;">
+            <div class="tarjeta prio-alta" id="ticket-101" draggable="true" ondragstart="iniciarArrastre(event)">
+                <header class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-danger-subtle text-danger small px-2">BG-101</span>
+                    <small class="text-muted fw-bold">Alta</small>
+                </header>
+                <div class="titulo my-2 fw-bold">Error en servidor de impresión</div>
+                <div class="meta mb-3">No se emiten reportes de inventario.</div>
+                <div class="d-flex justify-content-end gap-2 border-top pt-2">
+                    <button class="btn btn-sm btn-outline-primary py-1 px-2.5 rounded-2 fw-semibold text-primary" style="font-size:0.85rem;" onclick="cambiarEstadoTicket(101, 'proceso')">
+                        Atender &rarr;
                     </button>
                 </div>
             </div>
-            <div class="card-body p-2 bg-light-subtle" id="col-finalizado" style="min-height: 550px;">
-                <!-- Los tickets resueltos se depositarán aquí -->
-            </div>
         </div>
+    </div>
+
+    <div class="columna" ondragover="permitirSoltar(event)" ondrop="soltarTicket(event, 'proceso')">
+        <h2>
+            <span>En Proceso</span>
+            <span class="contador" id="badge-proceso">0</span>
+        </h2>
+        <div id="col-proceso" style="min-height: 500px;"></div>
+    </div>
+
+    <div class="columna" ondragover="permitirSoltar(event)" ondrop="soltarTicket(event, 'finalizado')">
+        <h2>
+            <span>Finalizado</span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="contador" id="badge-finalizado">0</span>
+                <button class="btn p-0 border-0 bg-transparent text-muted fw-bold" onclick="limpiarColumnaFinalizados()" title="Limpiar columna" style="font-size: 0.85rem; color: var(--texto-secundario) !important;">
+                    [X]
+                </button>
+            </div>
+        </h2>
+        <div id="col-finalizado" style="min-height: 500px;"></div>
     </div>
 </div>
 
-<!-- MODAL FLOTANTE: FORMULARIO ASÍNCRONO DE REGISTRO -->
-<div class="modal fade" id="modalNuevoTicket" tabindex="-1" aria-labelledby="modalNuevoTicketLabel" aria-hidden="true">
+<!-- MODAL FLOTANTE -->
+<div class="modal fade" id="modalNuevoTicket" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-3">
-            <div class="modal-header bg-primary text-white py-3">
-                <h5 class="modal-title fw-bold" id="modalNuevoTicketLabel"><i class="bi bi-ticket-detailed me-2"></i>Registrar Nueva Incidencia</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white py-3">
+                <h5 class="modal-title fw-bold">Registrar Incidencia</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form id="formTicketNuevo">
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label for="titulo" class="form-label fw-semibold small text-secondary">Título de la incidencia</label>
-                        <input type="text" id="titulo" class="form-control border-2 py-2 fs-6 rounded-2" required placeholder="Ej: Pérdida de paquetes en el switch de red">
+                        <label class="form-label fw-semibold small text-muted">Título de la incidencia</label>
+                        <input type="text" id="titulo" required placeholder="Ej: Error de conexión SQL">
                     </div>
                     <div class="mb-3">
-                        <label for="prioridad" class="form-label fw-semibold small text-secondary">Nivel de prioridad</label>
-                        <select id="prioridad" class="form-select border-2 py-2 fs-6 rounded-2">
+                        <label class="form-label fw-semibold small text-muted">Nivel de Prioridad</label>
+                        <select id="prioridad">
                             <option value="baja">Baja Prioridad</option>
                             <option value="media" selected>Media Prioridad</option>
                             <option value="alta">Alta Prioridad</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="descripcion" class="form-label fw-semibold small text-secondary">Descripción detallada</label>
-                        <textarea id="descripcion" class="form-control border-2 rounded-2" rows="3" required placeholder="Describa el comportamiento o código de error visualizado..."></textarea>
+                        <label class="form-label fw-semibold small text-muted">Descripción Detallada</label>
+                        <textarea id="descripcion" rows="3" required placeholder="Detalle los síntomas del error..."></textarea>
                     </div>
                 </div>
-                <div class="modal-footer bg-light p-3 border-top-0 rounded-bottom-3">
-                    <button type="button" class="btn btn-outline-secondary px-3 py-2" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm fw-semibold">Guardar Incidencia</button>
+                <div class="modal-footer bg-light p-3">
+                    <button type="button" class="btn text-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary bg-primary border-primary text-white px-4 fw-semibold">Guardar Ticket</button>
                 </div>
             </form>
         </div>

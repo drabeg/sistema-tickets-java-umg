@@ -5,34 +5,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Tickets - UMG</title>
-    <!-- Carga de las librerías físicas que descargaste -->
+    <!-- CONFIGURACIÓN DE RUTAS ABSOLUTAS PROFESIONALES (CON BARRA DIAGONAL INICIAL) -->
+    <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/css/logo-umg.png">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
 </head>
-<body class="d-flex flex-column h-100 bg-light">
+<body class="d-flex flex-column h-100">
 
-    <!-- Barra de navegación adaptable de Bootstrap -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
+    <!-- Barra de navegación corporativa UMG -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4 py-3">
         <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold text-primary" href="InicioServlet">
-                <i class="bi bi-ticket-perforated-fill me-2"></i>UMG Tickets
+            <!-- Logo local de la UMG enlazado de forma absoluta -->
+            <a class="navbar-brand fw-bold text-white d-flex align-items-center gap-2" href="${pageContext.request.contextPath}/inicio">
+                <img src="${pageContext.request.contextPath}/css/logo-umg.png" alt="Logo UMG" style="height: 35px; width: auto; object-fit: contain;">
+                <span style="font-size: 1.05rem;">Sistema de Tickets - Programación II</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
+            <!-- Menú superior con rutas relativas al contexto del servidor Java -->
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto gap-2">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="InicioServlet"><i class="bi bi-kanban me-1"></i> Tablero</a>
+                <ul class="navbar-nav ms-auto border-start border-secondary" id="mainMenuNav">
+                    <li class="nav-item border-end border-secondary">
+                        <a class="nav-link px-3" id="nav-inicio" href="${pageContext.request.contextPath}/inicio">Tablero</a>
+                    </li>
+                    <li class="nav-item border-end border-secondary">
+                        <a class="nav-link px-3" id="nav-historial" href="${pageContext.request.contextPath}/historial">Reportes</a>
+                    </li>
+                    <li class="nav-item border-end border-secondary">
+                        <a class="nav-link px-3" id="nav-notificaciones" href="${pageContext.request.contextPath}/notificaciones">Notificaciones</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="HistorialServlet"><i class="bi bi-clock-history me-1"></i> Historial</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="NotificacionesServlet"><i class="bi bi-bell me-1"></i> Notificaciones</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="ConfigServlet"><i class="bi bi-gear me-1"></i> Configuración</a>
+                        <a class="nav-link px-3" id="nav-config" href="${pageContext.request.contextPath}/config">Configuración</a>
                     </li>
                 </ul>
             </div>

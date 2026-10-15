@@ -9,9 +9,8 @@
         </div>
     </footer>
 
-    <!-- Carga de la librería JavaScript física que descargaste -->
+    <!-- Rutas absolutas del servidor para los scripts locales -->
     <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-    <!-- Script local para el control asíncrono -->
     <script src="${pageContext.request.contextPath}/js/app.js"></script>
 </body>
 </html>
