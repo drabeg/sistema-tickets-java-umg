@@ -39,6 +39,3 @@ Servicios publicados: WSEmpresas, WSRoles, WSUsuarios, WSCategorias, WSEstados, 
 
 ## 7. Dispositivo móvil
 Conectar al Wi-Fi del laboratorio, fijar IP estática (o reserva DHCP) y abrir `http://IP-WEB:8080/FrontendTickets/`.
-
-## 8. Verificación y solución de problemas
-Ver tabla "Problemas frecuentes" en `GUIA_ENTREGA_FINAL.md`.
