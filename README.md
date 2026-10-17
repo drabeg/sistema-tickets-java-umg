@@ -295,7 +295,7 @@ Luego, en **Configuración**, apunte a `http://localhost:8081/BackendTickets`. E
 | Libbny Dayana Medrano Arévalo | 5190-25-24096 |
 | Holcen Eduardo Ajín González | 5190-25-24834 |
 
-**Curso:** Programación II · **Catedrático:** _Nombre del ingeniero_ · **Universidad Mariano Gálvez de Guatemala**, Ingeniería en Sistemas · 2026
+**Curso:** Programación II · **Catedrático:** Sergio Guillermo Gómez Mendóza · **Universidad Mariano Gálvez de Guatemala**, Ingeniería en Sistemas · 2026
 
 ---
 
