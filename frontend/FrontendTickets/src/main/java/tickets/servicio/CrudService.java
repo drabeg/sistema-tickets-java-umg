@@ -92,8 +92,13 @@ public final class CrudService {
     }
 
     public static List<Opcion> opciones(Entidad ref) throws SoapException {
+        return opciones(ref, filas(ref));
+    }
+
+    /** Igual que opciones(ref) pero reutilizando filas ya leídas (evita llamar dos veces al servicio). */
+    public static List<Opcion> opciones(Entidad ref, List<Map<String, String>> filas) {
         List<Opcion> r = new ArrayList<>();
-        for (Map<String, String> f : filas(ref)) {
+        for (Map<String, String> f : filas) {
             String id = f.get(ref.getClaveId());
             if (Filas.vacio(id)) {
                 continue;
