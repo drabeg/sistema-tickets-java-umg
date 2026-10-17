@@ -1,4 +1,6 @@
 <%@ page pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <!DOCTYPE html>
 <html lang="es" class="h-100">
 <head>
@@ -51,3 +53,12 @@
     <!-- Contenedor general fluido -->
     <main class="flex-shrink-0">
         <div class="container-fluid px-4 pb-5">
+
+            <%-- Mensaje de resultado (éxito o error) que dejan los controladores tras guardar, eliminar, etc. --%>
+            <c:if test="${not empty flashMensaje}">
+                <div class="alert ${flashTipo eq 'ok' ? 'alert-success' : 'alert-danger'} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+                    <svg class="icono"><use href="${flashTipo eq 'ok' ? '#i-check-circle' : '#i-alert'}"/></svg>
+                    <span><c:out value="${flashMensaje}"/></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+            </c:if>

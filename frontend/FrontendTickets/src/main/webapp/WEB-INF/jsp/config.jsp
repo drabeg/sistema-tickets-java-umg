@@ -7,7 +7,7 @@
     <p class="text-muted small">Mapeo de endpoints de interoperabilidad y variables de red del sistema distribuido.</p>
 </div>
 
-<div class="row g-4">
++<div class="row g-4">
     <div class="col-12 col-lg-7">
         <div class="card border-0 shadow-sm p-4 h-100" style="background-color: var(--bg-tarjeta);">
             <h2 class="h5 fw-bold mb-3 d-flex align-items-center gap-2"><svg class="icono"><use href="#i-link"/></svg>Endpoints del Servidor SOAP</h2>
