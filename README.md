@@ -280,10 +280,8 @@ Luego, en **Configuración**, apunte a `http://localhost:8081/BackendTickets`. E
 - [x] Aplicación web MVC con CRUD genérico, cliente SOAP y validaciones
 - [x] Interfaz responsive con Bootstrap local, modo oscuro e íconos SVG
 - [x] Tablero Kanban con arrastrar y soltar
-- [x] Conectar el tablero Kanban de `/inicio` y el historial de `/historial` a los servicios SOAP reales
-- [x] CRUD completo de Historial y Notificaciones en los servicios
-- [x] Autenticación por roles y asignación distribuida de seguridad
-- [x] Exportación e integración de flujos de control de datos
+- [x] Conectar el tablero Kanban de `/inicio`, el historial y las notificaciones a los servicios SOAP reales
+- [x] Reportes formales del historial de cada ticket: PDF institucional (logo, indicadores, gráfico de tiempo por estado, tabla paginada) y libro de Excel (.xlsx) con resumen y filtros
 
 
 ## Equipo

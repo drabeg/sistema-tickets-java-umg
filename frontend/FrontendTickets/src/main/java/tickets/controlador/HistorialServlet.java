@@ -5,140 +5,181 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
+import java.io.OutputStream;
+import java.io.InputStream;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import tickets.modelo.Entidades;
+import tickets.modelo.Opcion;
 import tickets.modelo.Tabla;
 import tickets.servicio.CrudService;
 import tickets.soap.SoapClient;
 import tickets.soap.SoapException;
+import tickets.util.Filas;
+import tickets.reporte.DatosBitacora;
+import tickets.reporte.ExcelBitacora;
+import tickets.reporte.ReporteBitacora;
 
-/** Trazabilidad: historial de cambios de estado de un ticket (WSHistorial). */
+/**
+ * Centro de reportes: historial de cambios de estado de un ticket (WSHistorial)
+ * con exportación a un reporte PDF formal y a un libro de Excel (.xlsx).
+ *   GET /historial?id=N                          muestra la bitácora
+ *   GET /historial?id=N&accion=exportar&tipo=pdf|excel   descarga el reporte
+ */
 @WebServlet(name = "HistorialServlet", urlPatterns = {"/historial"})
 public class HistorialServlet extends BaseServlet {
 
     private static final long serialVersionUID = 1L;
-    private static final String SERVICIO_HISTORIAL = "WSHistorial";
+    private static final String SERVICIO = "WSHistorial";
+    private static final String OPERACION = "seleccionarHistorialPorTicket";
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String id = param(req, "id");
         String accion = param(req, "accion");
-        String tipo = param(req, "tipo");
 
-        List<Map<String, String>> listaTicketsReal = new ArrayList<>();
-        
-        // 1. Cargar SIEMPRE los tickets reales para el desplegable
-        try {
-            List<Map<String, String>> ticketsBD = CrudService.filas(Entidades.obtener("tickets"));
-            for (Map<String, String> t : ticketsBD) {
-                String idTicket = t.get("ID");
-                String codigo = t.getOrDefault("Código", t.getOrDefault("Codigo", idTicket));
-                String titulo = t.getOrDefault("Título", t.getOrDefault("Titulo", "Sin título"));
-                
-                if (idTicket != null && !idTicket.trim().isEmpty()) {
-                    Map<String, String> item = new LinkedHashMap<>();
-                    item.put("id", idTicket);
-                    item.put("texto", (codigo != null ? codigo : idTicket) + " — " + titulo);
-                    listaTicketsReal.add(item);
-                }
-            }
-        } catch (Exception ex) {
-            req.setAttribute("avisoError", "Error al cargar tickets: " + ex.getMessage());
+        if (!id.isEmpty() && !Filas.esEnteroPositivo(id)) {
+            aviso(req, "error", "El ID del ticket debe ser un número entero positivo.");
+            id = "";
         }
 
-        // 2. Cargar historial/transiciones desde el servicio SOAP WSHistorial
-        Tabla tabla = Tabla.vacia();
-        List<Map<String, String>> historialProcesado = new ArrayList<>();
-
-        if (id != null && !id.trim().isEmpty()) {
-            try {
-                Map<String, String> p = new LinkedHashMap<>();
-                p.put("idTicket", id);
-                
-                // Invocación nativa al servicio SOAP de historial
-                List<String> respuestas = SoapClient.invocar(SERVICIO_HISTORIAL, "obtenerHistorialTicket", p);
-                
-                if (respuestas != null && !respuestas.isEmpty()) {
-                    for (String r : respuestas) {
-                        Map<String, String> item = new LinkedHashMap<>();
-                        item.put("Ticket ID", id);
-                        item.put("Detalle / Transición", r);
-                        historialProcesado.add(item);
-                    }
-                    tabla = CrudService.construirTabla(historialProcesado, null);
-                } else {
-                    tabla = Tabla.vacia().conAviso("No se registraron transiciones para este ticket.");
-                }
-            } catch (SoapException ex) {
-                tabla = Tabla.vacia().conAviso("No hay transiciones registradas para este ticket.");
-            } catch (Exception ex) {
-                tabla = Tabla.vacia().conAviso("Error al obtener la bitácora del ticket.");
-            }
-        }
-
-        // 3. Manejo de exportación de archivos (PDF/Excel)
-        if ("exportar".equals(accion) && id != null && !id.trim().isEmpty()) {
-            exportarArchivo(resp, id, tipo, historialProcesado);
+        // Exportar: no dibuja la página, devuelve el archivo
+        if ("exportar".equals(accion) && !id.isEmpty()) {
+            exportar(req, resp, id, param(req, "tipo"));
             return;
         }
 
-        // 4. Enviar datos a la vista JSP
-        req.setAttribute("tickets", listaTicketsReal);
+        // Desplegable con los tickets reales (Folio — Título)
+        List<Opcion> tickets = new ArrayList<>();
+        try {
+            for (Map<String, String> t : CrudService.filas(Entidades.obtener("tickets"))) {
+                String idTicket = t.get("ID");
+                if (!Filas.vacio(idTicket)) {
+                    tickets.add(new Opcion(idTicket, t.getOrDefault("Folio", "Ticket " + idTicket)
+                            + " — " + t.getOrDefault("Título", "")));
+                }
+            }
+        } catch (SoapException ex) {
+            aviso(req, "error", "No se pudo cargar la lista de tickets: " + ex.getMessage());
+        }
+
+        Tabla tabla = Tabla.vacia();
+        if (!id.isEmpty()) {
+            try {
+                List<Map<String, String>> filas = cargarHistorial(id);
+                tabla = CrudService.construirTabla(filas, null);
+                if (filas.isEmpty()) {
+                    tabla.conAviso("Este ticket aún no tiene movimientos registrados.");
+                }
+            } catch (SoapException ex) {
+                aviso(req, "error", ex.getMessage());   // el error real, no uno genérico
+            }
+        }
+        req.setAttribute("tickets", tickets);
         req.setAttribute("idSeleccionado", id);
         req.setAttribute("tabla", tabla);
-        
         mostrar(req, resp, "historial.jsp", "Centro de Reportes Gerenciales");
     }
 
-    /** Genera la descarga física del archivo en el navegador con formato estructurado. */
-    private void exportarArchivo(HttpServletResponse resp, String idTicket, String tipo, List<Map<String, String>> historial) throws IOException {
-    boolean esExcel = "excel".equalsIgnoreCase(tipo);
-    String extension = esExcel ? "csv" : "txt";
-    // Si no es excel, indicamos que es un reporte de texto plano legible
-    String mimeType = esExcel ? "text/csv" : "text/plain";
-    String nombreArchivo = "Reporte_Bitacora_Ticket_" + idTicket + "." + extension;
+    // ------------------------------------------------------------------ datos
 
-    resp.setContentType(mimeType + "; charset=UTF-8");
-    resp.setCharacterEncoding("UTF-8");
-    resp.setHeader("Content-Disposition", "attachment; filename=\"" + nombreArchivo + "\"");
+    private List<Map<String, String>> cargarHistorial(String idTicket) throws SoapException {
+        Map<String, String> p = new LinkedHashMap<>();
+        p.put("idTicket", idTicket);
+        List<String> crudas = SoapClient.invocar(SERVICIO, OPERACION, p);
+        if (Filas.esError(crudas)) {
+            throw new SoapException(crudas.get(0));
+        }
+        List<Map<String, String>> filas = new ArrayList<>();
+        for (String linea : crudas) {
+            filas.add(separarTransicion(Filas.parsear(linea)));
+        }
+        return filas;
+    }
 
-    try (PrintWriter out = resp.getWriter()) {
-        if (esExcel) {
-            // Formato CSV tabular con BOM de Excel para detectar eñes y tildes correctamente
-            out.write('\ufeff'); 
-            out.println("No.;Ticket ID;Detalle y Transicion de Estado");
-            if (historial == null || historial.isEmpty()) {
-                out.println("1;" + idTicket + ";Sin transiciones o movimientos registrados.");
+    /** El servicio devuelve "De: X -> A: Y" en un solo campo; se separa en dos columnas. */
+    static Map<String, String> separarTransicion(Map<String, String> fila) {
+        String de = fila.get("De");
+        String marca = " -> A: ";
+        if (de == null || !de.contains(marca)) {
+            return fila;
+        }
+        Map<String, String> nueva = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : fila.entrySet()) {
+            if ("De".equals(e.getKey())) {
+                int i = de.indexOf(marca);
+                nueva.put("De", de.substring(0, i));
+                nueva.put("A", de.substring(i + marca.length()));
             } else {
-                for (int i = 0; i < historial.size(); i++) {
-                    String detalle = historial.get(i).getOrDefault("Detalle / Transición", "");
-                    // Limpiamos comillas o puntos y comas que rompan el CSV
-                    detalle = detalle.replace(";", ",");
-                    out.println((i + 1) + ";" + idTicket + ";" + detalle);
-                }
-            }
-        } else {
-            // Formato de Texto Plano limpio para el reporte/bitácora
-            out.println("REPORTE DE AUDITORIA Y BITACORA - TICKET #" + idTicket);
-            out.println("==================================================================");
-            out.println("Generado de forma automatizada por el Centro de Reportes");
-            out.println("==================================================================");
-            out.println();
-            if (historial == null || historial.isEmpty()) {
-                out.println("[-] Sin transiciones o movimientos registrados.");
-            } else {
-                for (int i = 0; i < historial.size(); i++) {
-                    out.println(String.format("[%02d] %s", (i + 1), historial.get(i).getOrDefault("Detalle / Transición", "")));
-                }
+                nueva.put(e.getKey(), e.getValue());
             }
         }
-        out.flush();
+        return nueva;
     }
-}
 
+    // ------------------------------------------------------------------ exportación
+
+    private void exportar(HttpServletRequest req, HttpServletResponse resp, String id, String tipo)
+            throws IOException {
+        List<Map<String, String>> filas;
+        try {
+            filas = cargarHistorial(id);
+        } catch (SoapException ex) {
+            flash(req, "error", "No se pudo generar el reporte: " + ex.getMessage());
+            redirigir(req, resp, "/historial?id=" + id);
+            return;
+        }
+        // el id ya fue validado como número, por eso es seguro usarlo en el nombre del archivo
+        DatosBitacora datos = DatosBitacora.crear(id, ticketPorId(id), filas, LocalDateTime.now());
+        if ("excel".equalsIgnoreCase(tipo)) {
+            enviar(resp, ExcelBitacora.generar(datos), "Bitacora_Ticket_" + id + ".xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        } else {
+            enviar(resp, ReporteBitacora.generar(logo(), datos), "Bitacora_Ticket_" + id + ".pdf", "application/pdf");
+        }
+    }
+
+    private void enviar(HttpServletResponse resp, byte[] bytes, String nombre, String tipoMime) throws IOException {
+        resp.setContentType(tipoMime);
+        resp.setHeader("Content-Disposition", "attachment; filename=\"" + nombre + "\"");
+        resp.setContentLength(bytes.length);
+        try (OutputStream out = resp.getOutputStream()) {
+            out.write(bytes);
+        }
+    }
+
+    /** Datos del ticket para el encabezado del reporte; si no se pueden leer, el reporte sale solo con la bitácora. */
+    private Map<String, String> ticketPorId(String id) {
+        try {
+            for (Map<String, String> t : CrudService.filas(Entidades.obtener("tickets"))) {
+                if (id.equals(t.get("ID"))) {
+                    return t;
+                }
+            }
+        } catch (SoapException ex) {
+            // se ignora: el reporte no depende de estos datos
+        }
+        return null;
+    }
+
+    private static volatile byte[] logoCache;
+
+    /** Logo de la UMG que ya está en el WAR (css/logo-umg.png); null si no se encuentra. */
+    private byte[] logo() {
+        byte[] cache = logoCache;
+        if (cache == null) {
+            try (InputStream in = getServletContext().getResourceAsStream("/css/logo-umg.png")) {
+                if (in != null) {
+                    cache = in.readAllBytes();
+                    logoCache = cache;
+                }
+            } catch (IOException ex) {
+                cache = null;
+            }
+        }
+        return cache;
+    }
 }

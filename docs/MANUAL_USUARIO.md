@@ -7,7 +7,7 @@ Este documento describe la funcionalidad de la plataforma y sirve como guía ope
 ## 1. Propósito del Sistema
 
 El sistema automatiza el registro, seguimiento y resolución de incidentes técnicos (*help desk*) garantizando un flujo secuencial estricto controlado por base de datos. Las incidencias transicionan de manera ordenada bajo los siguientes estados mutables:
-\[\text{Solicitado} \longrightarrow \text{En Proceso} \longrightarrow \text{Finalizado}\]
+**Solicitado → En Proceso → Finalizado**
 
 ---
 
@@ -17,8 +17,8 @@ Para iniciar la aplicación, abra el navegador web de su dispositivo e ingrese l
 ```http
 http://[IP_NODO_FRONTEND]:8080/FrontendTickets/
 ```
-* **Indicador de Conectividad:** La cabecera superior despliega dinámicamente el estado del clúster. La insignia **"Servicios en línea"** (color verde) confirma la comunicación XML/SOAP activa; de lo contrario, se mostrará la alerta **"Sin conexión con los servicios"** (color rojo).
-* **Adaptabilidad Móvil:** En dispositivos móviles, la interfaz se compacta automáticamente y habilita un menú colapsable accesible mediante el ícono de hamburguesa (`☰`).
+* **Estado de la conexión:** si los servicios no responden, el tablero muestra una alerta roja con el motivo y el botón **Revisar la conexión**, que lleva a la pantalla de Configuración.
+* **Adaptabilidad Móvil:** En dispositivos móviles, la interfaz se compacta automáticamente y habilita un menú colapsable accesible mediante el ícono de hamburguesa (botón de tres líneas).
 
 ---
 
@@ -27,26 +27,29 @@ http://[IP_NODO_FRONTEND]:8080/FrontendTickets/
 El módulo central opera mediante un modelo Kanban adaptado a la lógica FIFO (primero en entrar, primero en salir), organizando las tarjetas de modo que la incidencia más antigua se ubica siempre en la parte superior de cada columna.
 
 ### Elementos de la Tarjeta de Incidencia
-Cada registro visualiza el identificador único (Folio), título de la falla, categoría de clasificación, nivel de prioridad asignada, datos del solicitante y el especialista asignado.
+Cada tarjeta muestra el folio, el título, la prioridad (el color del borde indica Alta, Media o Baja), la categoría, el solicitante y, cuando ya fue tomada, el especialista que la atiende.
 
 ### Flujo de Acciones de Control
-* **Reclamar Incidencia:** Dentro de la columna *Solicitado*, el operador debe seleccionar su identificador de especialista en el menú desplegable y presionar el botón **Reclamar**. El sistema bloquea transacciones concurrentes para impedir el doble reclamo de un mismo ticket.
-* **Avanzar Estado:** Modifica secuencialmente la fase actual hacia la etapa inmediata superior (de *Solicitado* a *En Proceso*, y de *En Proceso* a *Finalizado*) habilitando los botones de acción rápida tras cada validación.
-* **Accesos Directos:** Cada tarjeta provee enlaces contextuales directos para consultar el histórico de transiciones, efectuar modificaciones de edición o proceder con el borrado lógico.
+* **Atender:** en la columna *Solicitado*, el botón **Atender** abre un diálogo para elegir al especialista; al confirmar, el ticket queda reclamado y pasa a *En Proceso*. Un mismo ticket no puede ser reclamado por dos especialistas.
+* **Pasar a la siguiente etapa:** los tickets en *En Proceso* tienen el botón **Pasar a Finalizado**. El flujo es secuencial: no se puede saltar una etapa ni retroceder.
+* **Arrastrar y soltar:** también puede arrastrar la tarjeta a la columna siguiente; es equivalente a usar el botón.
+* **Procesando:** mientras el servidor confirma la acción aparece el aviso *Procesando…* y se bloquean los botones para evitar envíos duplicados.
+* **Buscar y filtrar:** el cuadro de búsqueda filtra las tarjetas por texto, y los botones **Prioridad Alta** y **Mostrar Todo** filtran por prioridad.
+* **Ocultar finalizados:** el ícono de papelera de la columna *Finalizado* solo oculta las tarjetas de la pantalla; los tickets siguen guardados.
 
 ---
 
 ## 4. Registro de Nuevas Incidencias
 
-1. Diríjase a la sección **Tickets** dentro del menú de navegación y presione el botón **+ Nuevo**.
-2. Complete el formulario con los siguientes datos obligatorios: *Título*, *Categoría de Servicio*, *Prioridad* y *Usuario Solicitante*. El campo *Descripción* se mantiene opcional para detalles extendidos.
-3. Pulse **Guardar**. El sistema procesará la solicitud en el backend y retornará un folio estructurado de forma automática (por ejemplo: `HD-001`, `SW-002`) de acuerdo con la categoría seleccionada.
+1. En el tablero, pulse el botón **Crear Ticket** (esquina superior derecha).
+2. Complete el formulario *Registrar Incidencia*: *Título*, *Categoría*, *Nivel de Prioridad* y *Solicitante* son obligatorios; la *Descripción* es opcional.
+3. Pulse **Guardar Ticket**. El sistema registra el ticket en el backend, le asigna automáticamente un folio según la categoría (por ejemplo `HD-001`, `SW-002`) y lo coloca al final de la cola en *Solicitado*.
 
 ---
 
 ## 5. Módulos de Mantenimiento y Catálogos
 
-Los submódulos de gestión (*Tickets, Usuarios, Empresas, Roles, Categorías, Estados y Prioridades*) unifican su experiencia de usuario bajo el patrón de mantenimiento genérico:
+Los módulos de mantenimiento (*Tickets, Usuarios, Empresas, Roles, Categorías, Estados y Prioridades*) comparten un mismo patrón. Se abren con la dirección `/crud/{módulo}` (por ejemplo `/crud/usuarios` o `/crud/roles`):
 
 * **Visualización de Datos:** Despliega los registros en tablas estructuradas para pantallas de escritorio, transformándose de forma automática en tarjetas independientes al procesarse desde pantallas móviles.
 * **Búsqueda Dinámica por ID:** Permite filtrar de forma exacta ingresando el código del registro y presionando *Buscar*. El control *Ver todos* restablece los filtros de la grilla.
@@ -61,15 +64,16 @@ Permite auditar el buzón de alertas del personal técnico. Al seleccionar un es
 
 ---
 
-## 7. Trazabilidad e Historial
+## 7. Reportes e Historial
 
-Módulo dedicado a la auditoría de datos. Al seleccionar una incidencia, el sistema consulta el histórico completo en orden cronológico, detallando: la marca de tiempo exacta (fecha y hora), el usuario responsable, el estado de origen, el estado de destino y la nota técnica justificativa del cambio.
+La opción **Reportes** del menú abre el Centro de Reportes. Al seleccionar un ticket se muestra su bitácora en orden cronológico: fecha y hora, usuario responsable, estado de origen, estado de destino y nota del cambio.
+Desde esa pantalla se puede descargar el **reporte en PDF** (con el logo de la universidad, los datos del ticket, indicadores, un gráfico del tiempo que pasó en cada estado y la tabla de movimientos) o el **reporte en Excel** (.xlsx, con una hoja de resumen y otra con la bitácora lista para filtrar).
 
 ---
 
 ## 8. Consola de Configuración General
 
-Herramienta administrativa para realizar la interconexión de la arquitectura distribuida. Permite ingresar o modificar la dirección IP y puerto del servidor de servicios en caliente. Cuenta con el botón **"Probar conexión con los servicios"**, el cual ejecuta una verificación asíncrona de los 9 descriptores SOAP independientes para certificar la salud de la red local.
+Permite indicar la dirección del servidor de servicios (por ejemplo `http://192.168.1.11:8080/BackendTickets`) sin reiniciar la aplicación. El botón **Probar conexión** consulta los 9 servicios SOAP y muestra, para cada uno, si respondió (**OK**) o falló, junto con el tiempo de respuesta y el motivo del error.
 
 ---
 

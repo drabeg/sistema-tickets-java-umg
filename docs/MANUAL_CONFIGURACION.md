@@ -60,7 +60,7 @@ El correcto funcionamiento de las llamadas RPC/SOAP y las consultas JDBC depende
 
 ## 5. Configuración del Servidor de Servicios (Nodo Backend)
 
-1. **Parametrización de Conexiones JDBC:** Dentro del proyecto NetBeans en la capa backend, localice los descriptores de servicios `@WebService` (`WS*.java`). Ajuste la propiedad de conexión estructurando la cadena de conexión con los parámetros de seguridad SSL obligatorios para el entorno distribuido:
+1. **Parametrización de Conexiones JDBC:** Dentro del proyecto NetBeans en la capa backend, localice los descriptores de servicios `@WebService` (`WS*.java`). Ajuste la cadena de conexión (puerto fijo 1433, sin instancia con nombre, y con los parámetros SSL necesarios para el entorno distribuido):
    ```java
    jdbc:sqlserver://26.140.214.229:1433;databaseName=DB_ControlTickets;encrypt=true;trustServerCertificate=true;
    ```
@@ -68,7 +68,7 @@ El correcto funcionamiento de las llamadas RPC/SOAP y las consultas JDBC depende
 3. **Apertura de Firewall:** Asegure la accesibilidad del puerto `8080` de manera externa para la escucha de peticiones XML entrantes.
 4. **Verificación del Contrato WSDL:** Valide el estado de publicación abriendo el navegador del nodo web e ingresando a la URL del descriptor principal:
    ```http
-   http://26.247.182
+   http://IP-SERVICIOS:8080/BackendTickets/WSTickets?wsdl
    ```
    *Nota: Verifique que figuren expuestos los 9 endpoints requeridos por el core (`WSEmpresas`, `WSRoles`, `WSUsuarios`, `WSCategorias`, `WSEstados`, `WSPrioridades`, `WSTickets`, `WSHistorial`, `WSNotificaciones`).*
 
@@ -82,11 +82,13 @@ El correcto funcionamiento de las llamadas RPC/SOAP y las consultas JDBC depende
    ```
    *(Si el despliegue de contingencia se realiza sobre Tomcat/XAMPP, use el perfil de inyección de descriptores JSTL: `mvn clean package -Ptomcat`).*
 2. **Despliegue de la Presentación:** Copie el archivo resultante `target/FrontendTickets.war` y despliéguelo sobre el contenedor GlassFish del entorno local.
-3. **Resolución Dinámica de URL SOAP:** La URL base para consumir el backend SOAP se autodetectará de manera jerárquica bajo las siguientes directivas:
-   * **Opción A (Caliente):** Configuración interactiva desde la interfaz gráfica de la aplicación web en la ruta `/config`.
-   * **Opción B (Fichero):** Propiedad explícita `soap.base.url` del archivo `config.properties`.
-   * **Opción C (Parámetro JVM):** Bandera de ejecución del servidor: `-Dsoap.base.url=http://26.247.182`.
-   * **Opción D (Variable de Sistema):** Variable global de entorno: `TICKETS_SOAP_URL`.
+3. **Resolución de la URL SOAP.** Al arrancar, la aplicación toma la URL base en este orden de prioridad:
+   * **1. Parámetro JVM:** `-Dsoap.base.url=http://IP-SERVICIOS:8080/BackendTickets`
+   * **2. Variable de entorno:** `TICKETS_SOAP_URL`
+   * **3. Archivo `config.properties`:** propiedad `soap.base.url`
+   * **4. Valor por defecto:** `http://localhost:8080/BackendTickets`
+
+   Una vez en ejecución, la URL puede cambiarse en caliente desde la pantalla **Configuración** (`/config`) sin reiniciar; el cambio se conserva en memoria hasta el siguiente reinicio del servidor.
 4. **Test de Conectividad:** Ingrese al panel de configuración del frontend y presione el botón **"Probar conexión con los servicios"**. Confirme que el diagnóstico de los 9 descriptores retorne el estado de verificación exitosa (**OK**).
 
 ---
