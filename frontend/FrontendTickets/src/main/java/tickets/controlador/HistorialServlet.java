@@ -95,28 +95,50 @@ public class HistorialServlet extends BaseServlet {
         mostrar(req, resp, "historial.jsp", "Centro de Reportes Gerenciales");
     }
 
-    /** Genera la descarga física del archivo en el navegador. */
+    /** Genera la descarga física del archivo en el navegador con formato estructurado. */
     private void exportarArchivo(HttpServletResponse resp, String idTicket, String tipo, List<Map<String, String>> historial) throws IOException {
-        String extension = "excel".equalsIgnoreCase(tipo) ? "csv" : "txt";
-        String mimeType = "excel".equalsIgnoreCase(tipo) ? "text/csv" : "application/octet-stream";
-        String nombreArchivo = "Reporte_Bitacora_Ticket_" + idTicket + "." + extension;
+    boolean esExcel = "excel".equalsIgnoreCase(tipo);
+    String extension = esExcel ? "csv" : "txt";
+    // Si no es excel, indicamos que es un reporte de texto plano legible
+    String mimeType = esExcel ? "text/csv" : "text/plain";
+    String nombreArchivo = "Reporte_Bitacora_Ticket_" + idTicket + "." + extension;
 
-        resp.setContentType(mimeType + "; charset=UTF-8");
-        resp.setCharacterEncoding("UTF-8");
-        resp.setHeader("Content-Disposition", "attachment; filename=\"" + nombreArchivo + "\"");
+    resp.setContentType(mimeType + "; charset=UTF-8");
+    resp.setCharacterEncoding("UTF-8");
+    resp.setHeader("Content-Disposition", "attachment; filename=\"" + nombreArchivo + "\"");
 
-        try (PrintWriter out = resp.getWriter()) {
-            out.println("REPORTE DE AUDITORIA Y BITACORA - TICKET #" + idTicket);
-            out.println("=================================================");
-            out.println();
+    try (PrintWriter out = resp.getWriter()) {
+        if (esExcel) {
+            // Formato CSV tabular con BOM de Excel para detectar eñes y tildes correctamente
+            out.write('\ufeff'); 
+            out.println("No.;Ticket ID;Detalle y Transicion de Estado");
             if (historial == null || historial.isEmpty()) {
-                out.println("Sin transiciones o movimientos registrados.");
+                out.println("1;" + idTicket + ";Sin transiciones o movimientos registrados.");
             } else {
                 for (int i = 0; i < historial.size(); i++) {
-                    out.println((i + 1) + ". " + historial.get(i).getOrDefault("Detalle / Transición", ""));
+                    String detalle = historial.get(i).getOrDefault("Detalle / Transición", "");
+                    // Limpiamos comillas o puntos y comas que rompan el CSV
+                    detalle = detalle.replace(";", ",");
+                    out.println((i + 1) + ";" + idTicket + ";" + detalle);
                 }
             }
-            out.flush();
+        } else {
+            // Formato de Texto Plano limpio para el reporte/bitácora
+            out.println("REPORTE DE AUDITORIA Y BITACORA - TICKET #" + idTicket);
+            out.println("==================================================================");
+            out.println("Generado de forma automatizada por el Centro de Reportes");
+            out.println("==================================================================");
+            out.println();
+            if (historial == null || historial.isEmpty()) {
+                out.println("[-] Sin transiciones o movimientos registrados.");
+            } else {
+                for (int i = 0; i < historial.size(); i++) {
+                    out.println(String.format("[%02d] %s", (i + 1), historial.get(i).getOrDefault("Detalle / Transición", "")));
+                }
+            }
         }
+        out.flush();
     }
+}
+
 }
