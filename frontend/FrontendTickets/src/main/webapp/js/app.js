@@ -1,128 +1,94 @@
 /**
- * Mueve visualmente una tarjeta de ticket a su nueva columna 
- * y notifica al Servlet en segundo plano (sin recargar la página).
- * 
- * @param {number} ticketId - El identificador único del ticket (ej: 101)
- * @param {string} nuevoEstado - El estado destino ('solicitado', 'proceso', 'finalizado')
+ * Muestra un aviso (sin recargar) encima del tablero. tipo: 'ok' | 'error'
  */
-function cambiarEstadoTicket(ticketId, nuevoEstado) {
-    // 1. Buscamos el elemento HTML de la tarjeta usando su ID único
-    const tarjeta = document.getElementById(`ticket-${ticketId}`);
-    
-    // 2. Buscamos el contenedor (cuerpo) de la columna de destino
-    const columnaDestino = document.getElementById(`col-${nuevoEstado}`);
-    
-    if (!tarjeta || !columnaDestino) {
-        console.error("Error local: No se encontró la tarjeta o la columna destino.");
+function mostrarAviso(tipo, texto) {
+    const cont = document.getElementById("avisoTablero");
+    if (!cont) { alert(texto); return; }
+    const caja = document.createElement("div");
+    caja.className = "alert " + (tipo === "ok" ? "alert-success" : "alert-danger") + " alert-dismissible fade show";
+    caja.setAttribute("role", "alert");
+    const span = document.createElement("span");
+    span.textContent = texto;                       // textContent: nunca interpreta HTML
+    const cerrar = document.createElement("button");
+    cerrar.type = "button";
+    cerrar.className = "btn-close";
+    cerrar.setAttribute("data-bs-dismiss", "alert");
+    cerrar.setAttribute("aria-label", "Cerrar");
+    caja.appendChild(span);
+    caja.appendChild(cerrar);
+    cont.replaceChildren(caja);
+}
+
+/**
+ * Envía una acción al servlet (POST) con un formulario oculto. El servlet guarda por SOAP,
+ * deja un mensaje y redirige a /inicio, que vuelve a dibujar el tablero con los datos reales.
+ */
+function enviarAccion(campos) {
+    const tablero = document.getElementById("tablero");
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = tablero ? tablero.dataset.url : window.location.pathname;
+    Object.keys(campos).forEach(nombre => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = nombre;
+        input.value = campos[nombre];
+        form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+}
+
+/**
+ * Pide mover una tarjeta al estado indicado. Si el ticket aún no tiene especialista,
+ * abre primero el diálogo "Atender" (reclama y avanza en una sola operación).
+ */
+function solicitarAvance(tarjeta, idEstadoDestino) {
+    const id = tarjeta.dataset.id;
+    if (!id || !idEstadoDestino) {
+        mostrarAviso("error", "Este ticket no se puede mover (falta su ID o ya está en la última etapa).");
         return;
     }
-
-    // 3. Modificamos los botones internos de la tarjeta dinámicamente según su nueva posición
-    const contenedorBotones = tarjeta.querySelector('.d-flex.justify-content-end');
-    if (contenedorBotones) {
-        if (nuevoEstado === 'proceso') {
-            contenedorBotones.innerHTML = `
-                <button class="btn btn-sm btn-outline-success d-flex align-items-center py-1 px-2.5 rounded-2 fw-semibold" style="font-size:0.85rem;"
-                        onclick="cambiarEstadoTicket(${ticketId}, 'finalizado')">
-                    Finalizar <svg class="icono ms-1"><use href="#i-check-circle"/></svg>
-                </button>
-            `;
-        } else if (nuevoEstado === 'finalizado') {
-            contenedorBotones.innerHTML = `
-                <span class="text-success small fw-bold d-flex align-items-center" style="font-size:0.85rem;">
-                    <svg class="icono me-1"><use href="#i-check"/></svg> Resuelto
-                </span>
-            `;
-        }
+    if (tarjeta.dataset.puedeReclamar === "true") {
+        document.getElementById("atenderIdTicket").value = id;
+        document.getElementById("atenderIdEstado").value = idEstadoDestino;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("modalAtender")).show();
+        return;
     }
+    enviarAccion({ accion: "avanzar", idTicket: id, idNuevoEstado: idEstadoDestino });
+}
 
-    // 4. ¡Efecto visual inmediato! Movemos el elemento en el árbol visual (DOM) sin parpadear
-    columnaDestino.appendChild(tarjeta);
-    
-    // 5. Recalculamos los números de los contadores (Badges) de cada columna de forma dinámica
-    actualizarContadoresTablero();
-
-    // 6. ENLACE CON TU BACKEND (Petición asíncrona)
-    const urlServlet = "CrudServlet"; 
-    
-    const datosParaEnviar = new URLSearchParams();
-    datosParaEnviar.append("accion", "actualizarEstado");
-    datosParaEnviar.append("id", ticketId);
-    datosParaEnviar.append("estado", nuevoEstado);
-
-    fetch(urlServlet, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: datosParaEnviar
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error("El servidor no respondió de forma correcta.");
-        }
-        return response.text();
-    })
-    .then(data => {
-        console.log("Base de datos actualizada con éxito en segundo plano:", data);
-    })
-    .catch(error => {
-        console.error("Error de comunicación por red virtual:", error);
-        alert("Atención: El cambio se aplicó en tu pantalla, pero no se pudo guardar en el servidor. Verifica tu conexión de Radmin VPN.");
-    });
+/** Botón "Atender" / "Pasar a ..." de la tarjeta. */
+function avanzarDesdeBoton(boton) {
+    const tarjeta = boton.closest(".tarjeta");
+    solicitarAvance(tarjeta, tarjeta.dataset.siguienteId);
 }
 
 /**
- * Cuenta automáticamente cuántas tarjetas hay en cada contenedor 
- * y actualiza los globos numéricos del encabezado Kanban.
+ * Cuenta las tarjetas de cada columna y actualiza el globo numérico de su encabezado.
  */
 function actualizarContadoresTablero() {
-    const estados = ['solicitado', 'proceso', 'finalizado'];
-    
-    estados.forEach(estado => {
-        const columna = document.getElementById(`col-${estado}`);
-        const badge = document.getElementById(`badge-${estado}`);
-        
-        if (columna && badge) {
-            // Cuenta cuántos elementos hijos con la clase '.tarjeta' viven dentro de esa columna
-            const cantidadTickets = columna.querySelectorAll('.tarjeta').length;
-            badge.textContent = cantidadTickets;
+    document.querySelectorAll(".tablero .columna").forEach(columna => {
+        const badge = columna.querySelector(".contador");
+        if (badge) {
+            badge.textContent = columna.querySelectorAll(".tarjeta").length;
         }
     });
 }
 
-// Escuchador global: Cuando el formulario de nuevo ticket se envíe, interceptamos el flujo
-document.getElementById('formTicketNuevo')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    alert("Lógica de inserción asíncrona interceptada con éxito. Listo para conectar al Servlet de creación.");
-});
-
 /**
- * Remueve visualmente todas las tarjetas que se encuentren 
- * dentro de la columna de Finalizados y resetea su contador.
+ * Oculta de la vista las tarjetas de la última columna (Finalizado).
+ * Solo afecta a la pantalla: los tickets siguen guardados en la base de datos.
  */
 function limpiarColumnaFinalizados() {
-    const columna = document.getElementById("col-finalizado");
-    
-    if (columna) {
-        const tarjetasResueltas = columna.querySelectorAll('.tarjeta');
-        
-        if (tarjetasResueltas.length === 0) {
-            console.log("No hay tickets finalizados para limpiar.");
-            return;
-        }
-        
-        tarjetasResueltas.forEach(tarjeta => {
-            tarjeta.style.transition = "all 0.3s ease";
-            tarjeta.style.opacity = "0";
-            tarjeta.style.transform = "scale(0.8)";
-            
-            setTimeout(() => {
-                tarjeta.remove();
-                actualizarContadoresTablero();
-            }, 300);
-        });
-    }
+    const columnas = document.querySelectorAll(".tablero .columna");
+    if (columnas.length === 0) { return; }
+    const ultima = columnas[columnas.length - 1];
+    ultima.querySelectorAll(".tarjeta").forEach(tarjeta => {
+        tarjeta.style.transition = "all 0.3s ease";
+        tarjeta.style.opacity = "0";
+        setTimeout(() => { tarjeta.style.display = "none"; }, 300);
+    });
 }
 
 /**
@@ -206,98 +172,40 @@ function filtrarPrioridad(prioridad) {
 }
 
 // ========================================================
-/* LOGICA DE ARRASTRE Y SOLTADO (DRAG AND DROP NATIVO) */
+/* LOGICA DE ARRASTRE Y SOLTADO (DRAG AND DROP NATIVO)      */
 // ========================================================
 
-/**
- * Guarda temporalmente el ID de la tarjeta que el usuario empezó a arrastrar.
- */
+/** Guarda el ID de la tarjeta que el usuario empezó a arrastrar. */
 function iniciarArrastre(event) {
     event.dataTransfer.setData("text/plain", event.target.id);
-    // Añadimos un efecto visual de opacidad mientras se arrastra
     event.target.style.opacity = "0.5";
 }
 
-/**
- * Cancela el comportamiento por defecto del navegador para permitir el soltado.
- */
+/** Cancela el comportamiento por defecto del navegador para permitir el soltado. */
 function permitirSoltar(event) {
     event.preventDefault();
 }
 
 /**
- * Procesa la caída de la tarjeta dentro de la columna destino, actualiza 
- * los botones internos de forma adaptativa y notifica al backend en segundo plano.
+ * Procesa la caída de una tarjeta sobre una columna. El flujo es secuencial
+ * (Solicitado -> En Proceso -> Finalizado): solo se permite avanzar una etapa.
+ * @param {Event} event
+ * @param {HTMLElement} columna - la columna destino (this)
  */
-function soltarTicket(event, nuevoEstado) {
+function soltarTicket(event, columna) {
     event.preventDefault();
-    
-    // Recuperamos el ID de la tarjeta guardado en el paso de inicio
-    const idTarjeta = event.dataTransfer.getData("text/plain");
-    const tarjeta = document.getElementById(idTarjeta);
-    const columnaDestino = document.getElementById(`col-${nuevoEstado}`);
-    
-    if (tarjeta && columnaDestino) {
-        // Restauramos la opacidad normal de la tarjeta
-        tarjeta.style.opacity = "1";
-        
-        // Extraemos el número de ID puro (quitando la palabra 'ticket-')
-        const ticketIdPuro = idTarjeta.replace("ticket-", "");
-        
-        // 1. Modificamos los botones internos de la tarjeta dinámicamente según la columna destino
-        const contenedorBotones = tarjeta.querySelector('.d-flex.justify-content-end');
-        if (contenedorBotones) {
-            if (nuevoEstado === 'solicitado') {
-                contenedorBotones.innerHTML = `
-                    <button class="btn btn-sm btn-outline-primary py-1 px-2.5 rounded-2 fw-semibold text-primary" style="font-size:0.85rem;" 
-                            onclick="cambiarEstadoTicket(${ticketIdPuro}, 'proceso')">
-                        Atender &rarr;
-                    </button>
-                `;
-            } else if (nuevoEstado === 'proceso') {
-                contenedorBotones.innerHTML = `
-                    <button class="btn btn-sm btn-outline-success d-flex align-items-center py-1 px-2.5 rounded-2 fw-semibold" style="font-size:0.85rem;"
-                            onclick="cambiarEstadoTicket(${ticketIdPuro}, 'finalizado')">
-                        Finalizar &rarr;
-                    </button>
-                `;
-            } else if (nuevoEstado === 'finalizado') {
-                contenedorBotones.innerHTML = `
-                    <span class="text-success small fw-bold d-flex align-items-center" style="font-size:0.85rem;">
-                        Resuelto
-                    </span>
-                `;
-            }
-        }
-        
-        // 2. Desplazamos físicamente la tarjeta dentro del contenedor HTML sin recargar
-        columnaDestino.appendChild(tarjeta);
-        
-        // 3. Recalculamos los globos numéricos del encabezado
-        actualizarContadoresTablero();
-        
-        // 4. Disparamos la sincronización asíncrona hacia tu CrudServlet en segundo plano
-        sincronizarEstadoConServidor(ticketIdPuro, nuevoEstado);
+    const tarjeta = document.getElementById(event.dataTransfer.getData("text/plain"));
+    if (!tarjeta) { return; }
+    tarjeta.style.opacity = "1";
+
+    const ordenDestino = parseInt(columna.dataset.orden, 10);
+    const ordenOrigen = parseInt(tarjeta.dataset.orden, 10);
+    if (ordenDestino === ordenOrigen) { return; }
+    if (ordenDestino !== ordenOrigen + 1) {
+        mostrarAviso("error", "Solo se puede avanzar una etapa a la vez; el flujo es secuencial y no admite retroceso.");
+        return;
     }
-}
-
-/**
- * Función auxiliar para realizar el Fetch asíncrono sin mover la tarjeta visualmente de nuevo.
- */
-function sincronizarEstadoConServidor(ticketId, nuevoEstado) {
-    const datosParaEnviar = new URLSearchParams();
-    datosParaEnviar.append("accion", "actualizarEstado");
-    datosParaEnviar.append("id", ticketId);
-    datosParaEnviar.append("estado", nuevoEstado);
-
-    fetch("CrudServlet", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: datosParaEnviar
-    })
-    .then(response => response.text())
-    .then(data => console.log("Sincronización remota exitosa:", data))
-    .catch(error => console.error("Error en red virtual de sincronización:", error));
+    solicitarAvance(tarjeta, columna.dataset.estadoId);
 }
 
 // Vinculamos un escuchador de seguridad por si el usuario cancela el arrastre a mitad de camino
