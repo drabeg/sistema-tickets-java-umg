@@ -1,41 +1,101 @@
-# Manual de Configuraciones — Control de Tickets
+# Manual de Configuración y Despliegue — Sistema de Gestión de Tickets
 
-> Borrador listo para completar: sustituye las IPs de ejemplo por las reales y agrega capturas.
+Este manual detalla los pasos requeridos para el aprovisionamiento, configuración de red y despliegue del ecosistema del sistema distribuido de tres capas en un entorno de red local aislada o virtualizada mediante Radmin VPN.
 
-## 1. Arquitectura de despliegue
-| Servidor | Software | Puerto | Proyecto |
-|---|---|---|---|
-| Base de datos | SQL Server (Express) | 1433 | `DB_ControlTickets` |
-| Servicios | GlassFish 7 + JDK 17 | 8080 | `BackendTickets.war` (JAX-WS) |
-| Aplicación web | GlassFish 7 + JDK 17 (o Tomcat 10.1) | 8080 | `FrontendTickets.war` (Servlet/JSP) |
-| Cliente | Navegador del móvil | — | `http://IP-WEB:8080/FrontendTickets/` |
+## 1. Arquitectura de Despliegue Real
 
-## 2. Requisitos de software
-JDK 17, GlassFish 7 (Jakarta EE 10), NetBeans (opcional), Maven 3.9+, SQL Server Express + SSMS, controlador `mssql-jdbc-13.4.0.jre11.jar` (incluido en `backend/BackendTickets/lib`).
+El sistema está diseñado bajo una arquitectura distribuida desacoplada, donde la capa de presentación (web) consume las reglas de negocio exclusivamente mediante servicios SOAP.
 
-## 3. Red local
-Plan de direcciones (ejemplo): router 192.168.1.1 · BD 192.168.1.10 · Servicios 192.168.1.11 · Web 192.168.1.12 · Móvil 192.168.1.20 · máscara 255.255.255.0.
-Perfil de red de Windows: **Privada**. Desactivar el aislamiento de clientes en el router.
+| Servidor / Nodo | Software Base | Puerto | Componente / Artefacto |
+| :--- | :--- | :--- | :--- |
+| **Base de Datos** | Microsoft SQL Server Express | 1433 | Base de datos `DB_ControlTickets` |
+| **Servicios Backend** | GlassFish Server 7 + JDK 17 | 8080 | Servicio SOAP `BackendTickets.war` |
+| **Aplicación Web** | GlassFish Server 7 (o Tomcat 10.1) | 8080 | Aplicación MVC `FrontendTickets.war` |
+| **Cliente Final** | Navegador de Dispositivo Móvil | — | Interfaz de usuario vía HTTP |
 
-## 4. Servidor de base de datos
-1. Ejecutar `database/control_tickets_db.sql`.
-2. Autenticación mixta y usuario `sa` habilitado.
-3. TCP/IP habilitado, puerto fijo 1433 (Configuration Manager → IPAll), reiniciar el servicio.
-4. Regla de firewall: `netsh advfirewall firewall add rule name="SQL Server 1433" dir=in action=allow protocol=TCP localport=1433`.
+---
 
-## 5. Servidor de servicios
-1. En cada `WS*.java` configurar `jdbc:sqlserver://IP-BD:1433;databaseName=DB_ControlTickets;encrypt=true;trustServerCertificate=true;`, usuario y contraseña.
-2. Compilar (`Clean and Build`) y desplegar `BackendTickets.war` (consola `http://localhost:4848` → Applications → Deploy).
-3. Firewall del puerto 8080.
-4. Verificar: `http://IP-SERVICIOS:8080/BackendTickets/WSTickets?wsdl`.
+## 2. Requisitos de Entorno y Dependencias
 
-Servicios publicados: WSEmpresas, WSRoles, WSUsuarios, WSCategorias, WSEstados, WSPrioridades, WSTickets, WSHistorial, WSNotificaciones.
+Para el correcto ensamblado del proyecto, asegúrese de contar con las siguientes especificaciones técnicas:
+* **Java Development Kit (JDK):** Versión 17 (arquitectura Jakarta EE 10).
+* **Servidor de Aplicaciones:** GlassFish 7.x (soporte para Servlets 6.0 y JAX-WS).
+* **Gestor de Dependencias:** Maven 3.9+ (requerido para compilar la capa web).
+* **Motor de Base de Datos:** SQL Server 2019 o superior + SQL Server Management Studio (SSMS).
+* **Controlador JDBC:** `mssql-jdbc-13.4.0.jre11.jar` (provisto localmente dentro de la ruta `backend/BackendTickets/lib/`).
 
-## 6. Servidor de aplicación web
-1. `mvn clean package` (o `-Ptomcat` para Tomcat/XAMPP) → `target/FrontendTickets.war`; desplegar.
-2. Firewall del puerto 8080.
-3. URL de servicios: pantalla **Configuración**, o `config.properties` (`soap.base.url`), o parámetro de JVM `-Dsoap.base.url=...`, o variable de entorno `TICKETS_SOAP_URL`.
-4. Probar con *Probar conexión con los servicios* (deben salir 9 en OK).
+---
 
-## 7. Dispositivo móvil
-Conectar al Wi-Fi del laboratorio, fijar IP estática (o reserva DHCP) y abrir `http://IP-WEB:8080/FrontendTickets/`.
+## 3. Configuración de la Red Distribuida
+
+El correcto funcionamiento de las llamadas RPC/SOAP y las consultas JDBC depende del enrutamiento sin restricciones entre nodos. 
+
+### Parámetros de Red Asignados
+* **Segmento de Red Local (Radmin VPN):** `26.0.0.0/8`
+* **Nodo Base de Datos (PC Libbny):** `26.140.214.229`
+* **Nodo de Servicios (PC Richard):** `26.247.182.199`
+* **Nodo Web Frontend (Tu PC):** `26.x.x.x` (IP dinámica asignada por el adaptador de Radmin).
+* **Máscara de Subred:** `255.0.0.0`
+* **Perfil de Red en Windows:** Debe establecerse explícitamente como **Red Privada** en los tres equipos para permitir la visibilidad de sockets.
+* **Aislamiento de Clientes (AP Isolation):** Desactivado en el enrutador físico si las pruebas se realizan de manera local con Wi-Fi.
+
+---
+
+## 4. Configuración del Servidor de Base de Datos (Nodo BD)
+
+1. **Creación del Esquema:** Abra SQL Server Management Studio (SSMS) en el nodo correspondiente, cargue el script ubicado en `database/control_tickets_db.sql` y ejecútelo para inicializar las estructuras, catálogos bases, procedimientos almacenados y los *triggers* de control FIFO (`TR_Ticket_Insertar`, `TR_Ticket_ValidarEstado`, `TR_Ticket_Reclamo`).
+2. **Seguridad del Motor:** Habilite el **Modo de Autenticación Mixta** (SQL Server y Windows) en las propiedades del servidor. Asegúrese de que el usuario administrativo `sa` esté activo y configurado con la credencial acordada por el equipo.
+3. **Activación de Sockets TCP/IP:**
+   * Abra el *SQL Server Configuration Manager*.
+   * Vaya a *Configuración de red de SQL Server* -> *Protocolos de SQLEXPRESS*.
+   * Habilite el protocolo **TCP/IP**.
+   * Ingrese a las propiedades de TCP/IP, diríjase a la pestaña *Direcciones IP*, desplácese hasta la sección **IPAll**, limpie los *Puertos TCP Dinámicos* y asigne en *Puerto TCP* el valor fijo `1433`.
+   * Reinicie el servicio de SQL Server (`SQLEXPRESS`).
+4. **Apertura del Cortafuegos de Windows:** Dado que el adaptador virtual trata la conexión como red pública inicial, ejecute una consola de comandos (`cmd`) con privilegios de Administrador y habilite la regla de entrada con la siguiente instrucción de red:
+   ```bash
+   netsh advfirewall firewall add rule name="SQL Server 1433" dir=in action=allow protocol=TCP localport=1433
+   ```
+
+---
+
+## 5. Configuración del Servidor de Servicios (Nodo Backend)
+
+1. **Parametrización de Conexiones JDBC:** Dentro del proyecto NetBeans en la capa backend, localice los descriptores de servicios `@WebService` (`WS*.java`). Ajuste la propiedad de conexión estructurando la cadena de conexión con los parámetros de seguridad SSL obligatorios para el entorno distribuido:
+   ```java
+   jdbc:sqlserver://26.140.214.229:1433;databaseName=DB_ControlTickets;encrypt=true;trustServerCertificate=true;
+   ```
+2. **Compilación y Despliegue:** Ejecute una limpieza y compilación (*Clean and Build*) para empaquetar el artefacto `BackendTickets.war`. Acceda a la consola de administración de GlassFish (`http://localhost:4848`), navegue a *Applications* -> *Deploy*, cargue el archivo comprimido y confirme la publicación del contexto.
+3. **Apertura de Firewall:** Asegure la accesibilidad del puerto `8080` de manera externa para la escucha de peticiones XML entrantes.
+4. **Verificación del Contrato WSDL:** Valide el estado de publicación abriendo el navegador del nodo web e ingresando a la URL del descriptor principal:
+   ```http
+   http://26.247.182
+   ```
+   *Nota: Verifique que figuren expuestos los 9 endpoints requeridos por el core (`WSEmpresas`, `WSRoles`, `WSUsuarios`, `WSCategorias`, `WSEstados`, `WSPrioridades`, `WSTickets`, `WSHistorial`, `WSNotificaciones`).*
+
+---
+
+## 6. Configuración de la Aplicación Web (Nodo Frontend)
+
+1. **Construcción con Maven:** En la terminal local de desarrollo, compile el empaquetado del frontend web mediante el pom del proyecto:
+   ```bash
+   mvn clean package
+   ```
+   *(Si el despliegue de contingencia se realiza sobre Tomcat/XAMPP, use el perfil de inyección de descriptores JSTL: `mvn clean package -Ptomcat`).*
+2. **Despliegue de la Presentación:** Copie el archivo resultante `target/FrontendTickets.war` y despliéguelo sobre el contenedor GlassFish del entorno local.
+3. **Resolución Dinámica de URL SOAP:** La URL base para consumir el backend SOAP se autodetectará de manera jerárquica bajo las siguientes directivas:
+   * **Opción A (Caliente):** Configuración interactiva desde la interfaz gráfica de la aplicación web en la ruta `/config`.
+   * **Opción B (Fichero):** Propiedad explícita `soap.base.url` del archivo `config.properties`.
+   * **Opción C (Parámetro JVM):** Bandera de ejecución del servidor: `-Dsoap.base.url=http://26.247.182`.
+   * **Opción D (Variable de Sistema):** Variable global de entorno: `TICKETS_SOAP_URL`.
+4. **Test de Conectividad:** Ingrese al panel de configuración del frontend y presione el botón **"Probar conexión con los servicios"**. Confirme que el diagnóstico de los 9 descriptores retorne el estado de verificación exitosa (**OK**).
+
+---
+
+## 7. Pruebas y Consumo desde Dispositivos Móviles
+
+1. **Enlace a la Red Común:** Conecte el terminal móvil al mismo punto de acceso inalámbrico (Wi-Fi) unificado de las terminales de desarrollo.
+2. **Asignación de IP:** Configure el dispositivo con direccionamiento IP estático o realice una reserva de concesión DHCP para evitar colisiones dentro del segmento del laboratorio.
+3. **Acceso a la Plataforma:** Inicie el explorador del dispositivo móvil e invoque la URL del nodo web para operar el tablero Kanban interactivo y el registro de incidencias:
+   ```http
+   http://[IP_TU_PC_FRONTEND]:8080/FrontendTickets/
+   ```
