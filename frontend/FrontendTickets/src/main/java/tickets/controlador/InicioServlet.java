@@ -9,6 +9,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import tickets.modelo.Campo;
 import tickets.modelo.ColumnaTablero;
 import tickets.modelo.Entidad;
@@ -42,15 +47,29 @@ public class InicioServlet extends BaseServlet {
         List<Opcion> especialistas = new ArrayList<>();
         boolean avisoParche = false;
         try {
-            List<Map<String, String>> estados = CrudService.filas(Entidades.obtener("estados"));
-            List<Map<String, String>> tickets = CrudService.filas(Entidades.obtener("tickets"));
-            List<Map<String, String>> usuarios = CrudService.filas(Entidades.obtener("usuarios"));
+            // Las 5 consultas son independientes: se lanzan a la vez para que la pantalla cargue más rápido
+            ExecutorService pool = Executors.newFixedThreadPool(5);
+            List<Map<String, String>> estados, tickets, usuarios, listaCategorias, listaPrioridades;
+            try {
+                Future<List<Map<String, String>>> fEstados = leer(pool, "estados");
+                Future<List<Map<String, String>>> fTickets = leer(pool, "tickets");
+                Future<List<Map<String, String>>> fUsuarios = leer(pool, "usuarios");
+                Future<List<Map<String, String>>> fCategorias = leer(pool, "categorias");
+                Future<List<Map<String, String>>> fPrioridades = leer(pool, "prioridades");
+                estados = esperar(fEstados);
+                tickets = esperar(fTickets);
+                usuarios = esperar(fUsuarios);
+                listaCategorias = esperar(fCategorias);
+                listaPrioridades = esperar(fPrioridades);
+            } finally {
+                pool.shutdown();
+            }
             columnas = TableroServlet.armarColumnas(estados);
             avisoParche = TableroServlet.distribuir(columnas, tickets);
             especialistas = TableroServlet.especialistas(usuarios);
             solicitantes = CrudService.opciones(Entidades.obtener("usuarios"), usuarios);
-            categorias = CrudService.opciones(Entidades.obtener("categorias"));
-            prioridades = CrudService.opciones(Entidades.obtener("prioridades"));
+            categorias = CrudService.opciones(Entidades.obtener("categorias"), listaCategorias);
+            prioridades = CrudService.opciones(Entidades.obtener("prioridades"), listaPrioridades);
         } catch (SoapException ex) {
             aviso(req, "error", "No se pudo cargar el tablero: " + ex.getMessage());
         }
@@ -122,17 +141,73 @@ public class InicioServlet extends BaseServlet {
         String r2 = SoapClient.invocarTexto(SERVICIO, "cambiarEstadoTicket", cambio);
         if ("ok".equals(tipoDe(r2))) {
             flash(req, "ok", "Ticket reclamado y movido a la siguiente etapa.");
+        } else if (yaEstaEnEtapa(idTicket, idEstado)) {
+            flash(req, "ok", "El ticket ya estaba en esa etapa; no se repitió la acción.");
         } else {
             flash(req, "error", "El ticket se reclamó, pero no pudo avanzar: " + r2);
         }
     }
 
     private void avanzar(HttpServletRequest req) throws SoapException {
+        String idTicket = idValido(req, "idTicket", "ticket");
+        String idEstado = idValido(req, "idNuevoEstado", "estado");
         Map<String, String> p = new LinkedHashMap<>();
-        p.put("idTicket", idValido(req, "idTicket", "ticket"));
-        p.put("idNuevoEstado", idValido(req, "idNuevoEstado", "estado"));
+        p.put("idTicket", idTicket);
+        p.put("idNuevoEstado", idEstado);
         String r = SoapClient.invocarTexto(SERVICIO, "cambiarEstadoTicket", p);
-        flash(req, tipoDe(r), "ok".equals(tipoDe(r)) ? "Ticket movido de etapa." : r);
+        if ("ok".equals(tipoDe(r))) {
+            flash(req, "ok", "Ticket movido de etapa.");
+        } else if (yaEstaEnEtapa(idTicket, idEstado)) {
+            flash(req, "ok", "El ticket ya estaba en esa etapa; no se repitió la acción.");
+        } else {
+            flash(req, "error", r);
+        }
+    }
+
+    /**
+     * Si el cambio de estado falló, comprueba si el ticket YA está en la etapa pedida
+     * (típico de un doble clic o de una página desactualizada). En ese caso no es un error real.
+     */
+    private boolean yaEstaEnEtapa(String idTicket, String idEstadoDestino) {
+        try {
+            Map<String, String> p = new LinkedHashMap<>();
+            p.put("idTicket", idTicket);
+            String r = SoapClient.invocarTexto(SERVICIO, "seleccionarTicketPorId", p);
+            if (Filas.vacio(r) || Filas.esError(r) || Filas.noEncontrado(r)) {
+                return false;
+            }
+            String estadoActual = Filas.parsear(r).get("Estado");
+            if (estadoActual == null) {
+                return false;
+            }
+            for (Map<String, String> e : CrudService.filas(Entidades.obtener("estados"))) {
+                if (idEstadoDestino.equals(e.get("ID"))) {
+                    return estadoActual.equals(e.get("Estado"));
+                }
+            }
+        } catch (SoapException ignorado) {
+            // si no se puede comprobar, se informa el error original
+        }
+        return false;
+    }
+
+    private static Future<List<Map<String, String>>> leer(ExecutorService pool, String claveEntidad) {
+        Callable<List<Map<String, String>>> tarea = () -> CrudService.filas(Entidades.obtener(claveEntidad));
+        return pool.submit(tarea);
+    }
+
+    private static <T> T esperar(Future<T> futuro) throws SoapException {
+        try {
+            return futuro.get();
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof SoapException) {
+                throw (SoapException) e.getCause();
+            }
+            throw new SoapException("Error interno al consultar los servicios: " + e.getCause(), e.getCause());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new SoapException("La consulta fue interrumpida.", e);
+        }
     }
 
     private static String idValido(HttpServletRequest req, String nombre, String etiqueta) {

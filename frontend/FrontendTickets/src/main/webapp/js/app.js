@@ -1,3 +1,54 @@
+// ========================================================
+/* PROTECCIÓN CONTRA DOBLE ENVÍO + INDICADOR "PROCESANDO"    */
+// ========================================================
+// Las acciones viajan por VPN a varios servidores y pueden tardar unos segundos. Sin un indicador
+// el usuario vuelve a hacer clic y la acción se envía dos veces. Aquí se bloquea el segundo clic.
+
+let envioEnCurso = false;
+
+/** Cubre la pantalla con un velo y un indicador mientras el servidor procesa la acción. */
+function mostrarProcesando() {
+    if (document.getElementById("velo-procesando")) { return; }
+    const velo = document.createElement("div");
+    velo.id = "velo-procesando";
+    velo.className = "position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark bg-opacity-75 text-white";
+    velo.style.zIndex = "2000";
+    velo.setAttribute("role", "status");
+    velo.innerHTML = '<div class="spinner-border mb-3" aria-hidden="true"></div><div class="fw-semibold">Procesando…</div>';
+    document.body.appendChild(velo);
+}
+
+function quitarProcesando() {
+    document.getElementById("velo-procesando")?.remove();
+    document.querySelectorAll("button[disabled][data-bloqueado]").forEach(b => {
+        b.disabled = false;
+        b.removeAttribute("data-bloqueado");
+    });
+    envioEnCurso = false;
+}
+
+// Todo formulario POST: un solo envío, botones bloqueados y velo de "Procesando"
+document.addEventListener("submit", function (e) {
+    const form = e.target;
+    if (!form || form.method.toLowerCase() !== "post") { return; }
+    if (e.defaultPrevented) { return; }                 // otro escuchador lo canceló (p. ej. un confirm)
+    if (envioEnCurso) { e.preventDefault(); return; }   // segundo envío: se ignora
+    envioEnCurso = true;
+    // setTimeout 0: el navegador ya tomó los datos del formulario antes de bloquear los botones
+    setTimeout(() => {
+        form.querySelectorAll("button[type=submit], button:not([type])").forEach(b => {
+            b.disabled = true;
+            b.setAttribute("data-bloqueado", "1");
+        });
+        mostrarProcesando();
+    }, 0);
+});
+
+// Al volver con el botón "Atrás" el navegador puede restaurar la página bloqueada: se libera
+window.addEventListener("pageshow", function (e) {
+    if (e.persisted) { quitarProcesando(); }
+});
+
 /**
  * Muestra un aviso (sin recargar) encima del tablero. tipo: 'ok' | 'error'
  */
@@ -24,6 +75,9 @@ function mostrarAviso(tipo, texto) {
  * deja un mensaje y redirige a /inicio, que vuelve a dibujar el tablero con los datos reales.
  */
 function enviarAccion(campos) {
+    if (envioEnCurso) { return; }
+    envioEnCurso = true;
+    mostrarProcesando();
     const tablero = document.getElementById("tablero");
     const form = document.createElement("form");
     form.method = "POST";
