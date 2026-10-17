@@ -1,45 +1,83 @@
-# Manual de Usuario — Control de Tickets
+# Manual de Operación y Usuario — Sistema de Gestión de Tickets
 
-> Borrador: agrega una captura de pantalla del móvil donde se indica **[CAPTURA]**.
+Este documento describe la funcionalidad de la plataforma y sirve como guía operativa para la administración de incidencias bajo el esquema de colas FIFO en el entorno distribuido.
 
-## 1. ¿Para qué sirve?
-Registrar incidentes (tickets) y atenderlos en estricto orden de llegada (cola FIFO): **Solicitado → En Proceso → Finalizado**.
+---
 
-## 2. Ingreso
-Abra `http://IP-WEB:8080/FrontendTickets/` en el navegador. La pantalla de inicio muestra los módulos y la insignia **Servicios en línea** (verde) o **Sin conexión con los servicios** (rojo). **[CAPTURA]**
-En el móvil, el botón ☰ abre el menú.
+## 1. Propósito del Sistema
 
-## 3. Tablero FIFO
-Tres columnas, una por estado; el ticket más antiguo está arriba. Cada tarjeta muestra folio, título, categoría, prioridad, solicitante y especialista. **[CAPTURA]**
-* **Reclamar:** en *Solicitado*, elija un especialista y pulse *Reclamar*. Solo un especialista puede reclamar cada ticket.
-* **Pasar a …:** avanza el ticket a la siguiente etapa (de uno en uno).
-* **Historial / Editar / Eliminar:** accesos rápidos de la tarjeta.
+El sistema automatiza el registro, seguimiento y resolución de incidentes técnicos (*help desk*) garantizando un flujo secuencial estricto controlado por base de datos. Las incidencias transicionan de manera ordenada bajo los siguientes estados mutables:
+\[\text{Solicitado} \longrightarrow \text{En Proceso} \longrightarrow \text{Finalizado}\]
 
-## 4. Crear un ticket
-*Tickets → + Nuevo* → complete Título, Descripción (opcional), Categoría, Prioridad y Solicitante → *Guardar*. El sistema asigna el folio (p. ej. HD-001). **[CAPTURA]**
+---
 
-## 5. Módulos de mantenimiento
-Tickets, Usuarios, Empresas, Roles, Categorías, Estados y Prioridades funcionan igual:
-* **Ver todos:** la tabla aparece al entrar. En el móvil cada registro se muestra como una tarjeta.
-* **Buscar por ID:** escriba el número y pulse *Buscar*; *Ver todos* limpia el filtro.
-* **Nuevo:** botón *+ Nuevo*, llene el formulario y *Guardar*. Los campos con * son obligatorios.
-* **Editar:** botón *Editar* del registro; modifique y *Guardar*.
-* **Eliminar / Desactivar:** botón rojo; pide confirmación. Usuarios y empresas se *desactivan* (no se borran); los tickets se ocultan.
-Si un dato no es válido (correo, número, longitud) se muestra el mensaje y el formulario conserva lo escrito. **[CAPTURA]**
+## 2. Acceso a la Plataforma
 
-## 6. Notificaciones
-Elija un especialista y pulse *Ver pendientes*. Use *Marcar leída* para descartar una alerta. **[CAPTURA]**
+Para iniciar la aplicación, abra el navegador web de su dispositivo e ingrese la URL correspondiente al nodo de presentación:
+```http
+http://[IP_NODO_FRONTEND]:8080/FrontendTickets/
+```
+* **Indicador de Conectividad:** La cabecera superior despliega dinámicamente el estado del clúster. La insignia **"Servicios en línea"** (color verde) confirma la comunicación XML/SOAP activa; de lo contrario, se mostrará la alerta **"Sin conexión con los servicios"** (color rojo).
+* **Adaptabilidad Móvil:** En dispositivos móviles, la interfaz se compacta automáticamente y habilita un menú colapsable accesible mediante el ícono de hamburguesa (`☰`).
 
-## 7. Historial
-Elija un ticket para ver cada cambio de estado: fecha, usuario, estado anterior y nuevo, y nota. **[CAPTURA]**
+---
 
-## 8. Configuración
-Permite indicar la dirección del servidor de servicios y probar la conexión con cada servicio. **[CAPTURA]**
+## 3. Operación del Tablero FIFO
 
-## 9. Mensajes frecuentes
-| Mensaje | Significado |
-|---|---|
-| No se pudo conectar con … | El servidor de servicios no responde: revisar *Configuración* |
-| Transición de estado inválida | Solo se puede avanzar un estado a la vez |
-| El ticket ya fue reclamado | Otro especialista lo tomó antes |
-| Error (puede estar en uso) | El registro tiene datos relacionados y no se puede eliminar |
+El módulo central opera mediante un modelo Kanban adaptado a la lógica FIFO (primero en entrar, primero en salir), organizando las tarjetas de modo que la incidencia más antigua se ubica siempre en la parte superior de cada columna.
+
+### Elementos de la Tarjeta de Incidencia
+Cada registro visualiza el identificador único (Folio), título de la falla, categoría de clasificación, nivel de prioridad asignada, datos del solicitante y el especialista asignado.
+
+### Flujo de Acciones de Control
+* **Reclamar Incidencia:** Dentro de la columna *Solicitado*, el operador debe seleccionar su identificador de especialista en el menú desplegable y presionar el botón **Reclamar**. El sistema bloquea transacciones concurrentes para impedir el doble reclamo de un mismo ticket.
+* **Avanzar Estado:** Modifica secuencialmente la fase actual hacia la etapa inmediata superior (de *Solicitado* a *En Proceso*, y de *En Proceso* a *Finalizado*) habilitando los botones de acción rápida tras cada validación.
+* **Accesos Directos:** Cada tarjeta provee enlaces contextuales directos para consultar el histórico de transiciones, efectuar modificaciones de edición o proceder con el borrado lógico.
+
+---
+
+## 4. Registro de Nuevas Incidencias
+
+1. Diríjase a la sección **Tickets** dentro del menú de navegación y presione el botón **+ Nuevo**.
+2. Complete el formulario con los siguientes datos obligatorios: *Título*, *Categoría de Servicio*, *Prioridad* y *Usuario Solicitante*. El campo *Descripción* se mantiene opcional para detalles extendidos.
+3. Pulse **Guardar**. El sistema procesará la solicitud en el backend y retornará un folio estructurado de forma automática (por ejemplo: `HD-001`, `SW-002`) de acuerdo con la categoría seleccionada.
+
+---
+
+## 5. Módulos de Mantenimiento y Catálogos
+
+Los submódulos de gestión (*Tickets, Usuarios, Empresas, Roles, Categorías, Estados y Prioridades*) unifican su experiencia de usuario bajo el patrón de mantenimiento genérico:
+
+* **Visualización de Datos:** Despliega los registros en tablas estructuradas para pantallas de escritorio, transformándose de forma automática en tarjetas independientes al procesarse desde pantallas móviles.
+* **Búsqueda Dinámica por ID:** Permite filtrar de forma exacta ingresando el código del registro y presionando *Buscar*. El control *Ver todos* restablece los filtros de la grilla.
+* **Inserción y Modificación:** Al presionar **+ Nuevo** o **Editar**, se despliega un formulario con validaciones en tiempo real en la capa del servidor. Los campos requeridos se encuentran señalados con un asterisco (`*`). Si el sistema detecta inconsistencias (longitudes inválidas o formatos de correo erróneos), interrumpe el almacenamiento y preserva los datos ingresados para su corrección rápida.
+* **Remoción Segura (Borrado Lógico):** El botón de eliminación solicita una confirmación explícita. Para proteger la integridad referencial del histórico, los módulos de *Usuarios* y *Empresas* ejecutan una **desactivación de estado**, mientras que los *Tickets* se marcan con un flag oculto sin ser eliminados físicamente del motor de base de datos.
+
+---
+
+## 6. Centro de Notificaciones
+
+Permite auditar el buzón de alertas del personal técnico. Al seleccionar un especialista y pulsar **Ver pendientes**, la interfaz cargará las acciones del sistema automatizadas por los *triggers*. La acción **Marcar como leída** archiva la alerta del tablero de pendientes del especialista.
+
+---
+
+## 7. Trazabilidad e Historial
+
+Módulo dedicado a la auditoría de datos. Al seleccionar una incidencia, el sistema consulta el histórico completo en orden cronológico, detallando: la marca de tiempo exacta (fecha y hora), el usuario responsable, el estado de origen, el estado de destino y la nota técnica justificativa del cambio.
+
+---
+
+## 8. Consola de Configuración General
+
+Herramienta administrativa para realizar la interconexión de la arquitectura distribuida. Permite ingresar o modificar la dirección IP y puerto del servidor de servicios en caliente. Cuenta con el botón **"Probar conexión con los servicios"**, el cual ejecuta una verificación asíncrona de los 9 descriptores SOAP independientes para certificar la salud de la red local.
+
+---
+
+## 9. Catálogo de Mensajes del Sistema
+
+| Mensaje de Error en Pantalla | Significado Técnico | Acción Correctiva Recomendada |
+| :--- | :--- | :--- |
+| *No se pudo conectar con el servicio...* | Pérdida de conectividad con la capa intermedia SOAP. | Verificar IP en la sección de *Configuración* y revisar reglas del firewall local. |
+| *Transición de estado inválida* | Intento de saltar fases del ciclo de vida FIFO. | Avanzar los flujos estrictamente de uno en uno (`Solicitado -> En Proceso -> Finalizado`). |
+| *El ticket ya fue reclamado* | Conflicto de concurrencia en base de datos. | Seleccionar otra incidencia libre; el ticket ya cuenta con un especialista asignado. |
+| *Error (puede estar en uso)* | Restricción por clave foránea de integridad referencial. | No es posible eliminar el catálogo porque existen registros dependientes vinculados a él. |
